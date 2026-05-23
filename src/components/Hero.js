@@ -1,62 +1,39 @@
 /**
- * Hero — fond `/hero.png`, cover + center right, sans flou ni calque assombri.
- * Contenu limité à 50 % du conteneur site pour ne pas recouvrir le décor à droite.
+ * Hero — two-layer composition:
+ *   1) `<img>` background pinned to inset:0 (object-cover) — fills the
+ *      whole section so the orange/beige tones span the full width.
+ *   2) Content (title + search form + stat cards) on `relative z-10`,
+ *      with every wrapper kept `bg-transparent`. Only the form and the
+ *      stat cards keep their own white background to pop over the image;
+ *      the title uses a soft text-shadow for readability instead of a
+ *      solid colour panel.
  */
+import { useTranslation } from 'react-i18next';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import { CATEGORIES, CITIES } from '../services/categories';
 import { Icon } from './Icons';
 
-// CRITICAL: background must remain sharp (no blur/backdrop/opacity overlays).
 const HERO_BG = `${process.env.PUBLIC_URL || ''}/logo.png`;
 
-const CATEGORY_FR = {
-  vehicles: 'Véhicules',
-  'real-estate': 'Immobilier',
-  electronics: 'Électronique',
-  fashion: 'Mode',
-  home: 'Maison & jardin',
-  'kids-baby': 'Enfants',
-  jobs: 'Emploi',
-  services: 'Services',
-  rugs: 'Tapis',
-  other: 'Autres',
+const CATEGORY_I18N_KEYS = {
+  vehicles: 'categories.vehicles',
+  'real-estate': 'categories.realEstate',
+  electronics: 'categories.electronics',
+  fashion: 'categories.fashion',
+  home: 'categories.homeGarden',
+  'kids-baby': 'categories.kidsBaby',
+  jobs: 'categories.jobs',
+  services: 'categories.services',
+  rugs: 'categories.rugs',
+  other: 'categories.other',
 };
 
-const HERO_STATS = [
-  {
-    id: 'ads',
-    label: '10K+ Annonces',
-    icon: 'fileText',
-    iconWrap: 'bg-orange-50 text-orange-600',
-  },
-  {
-    id: 'users',
-    label: '5K+ Utilisateurs',
-    icon: 'user',
-    iconWrap: 'bg-violet-50 text-violet-600',
-  },
-  {
-    id: 'cat',
-    label: '20+ Catégories',
-    icon: 'grid',
-    iconWrap: 'bg-emerald-50 text-emerald-600',
-  },
-  {
-    id: 'safe',
-    label: '100% Sécurisé',
-    icon: 'shield',
-    iconWrap: 'bg-sky-50 text-sky-600',
-  },
+const HERO_STAT_DEFS = [
+  { id: 'ads', tKey: 'hero.stats.ads', icon: 'fileText', iconWrap: 'bg-orange-50 text-orange-600' },
+  { id: 'users', tKey: 'hero.stats.users', icon: 'user', iconWrap: 'bg-violet-50 text-violet-600' },
+  { id: 'cat', tKey: 'hero.stats.categories', icon: 'grid', iconWrap: 'bg-emerald-50 text-emerald-600' },
+  { id: 'safe', tKey: 'hero.stats.safe', icon: 'shield', iconWrap: 'bg-sky-50 text-sky-600' },
 ];
-
-const heroBgStyle = {
-  backgroundImage: `url(${HERO_BG})`,
-  backgroundSize: 'cover',
-  backgroundPosition: 'center right',
-  backgroundRepeat: 'no-repeat',
-  filter: 'none',
-  backdropFilter: 'none',
-};
 
 export default function Hero({
   searchQuery,
@@ -67,20 +44,65 @@ export default function Hero({
   onCityChange,
   onSubmit,
 }) {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
   return (
     <section
-      className="relative w-full overflow-hidden rounded-b-3xl bg-no-repeat"
-      style={heroBgStyle}
-      aria-label="Recherche marketplace"
+      className="relative isolate w-full overflow-hidden rounded-b-3xl bg-transparent"
+      aria-label={t('hero.aria')}
     >
-      <div className={`relative mx-auto ${SITE_MAX_WIDTH_CLASS} lg:min-h-[min(86vw,520px)]`}>
-        <div className={`flex justify-start ${SITE_GUTTER_CLASS}`}>
-          <div className="w-full min-w-0 max-w-full pt-14 pb-10 sm:pt-16 sm:pb-12 lg:max-w-[50%] lg:pt-20 lg:pb-14 lg:pr-8 xl:pr-12">
-            <h1 className="text-balance text-4xl font-extrabold leading-[1.03] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-              Achetez et vendez tout, <span className="text-brand-500">simplement</span>
+      {/* Layer 1 — full-quality background image, spanning the entire Hero.
+          A native <img> tag preserves the full resolution of `/logo.png`.
+          `object-cover` makes it fill any aspect ratio while `object-center`
+          keeps the orange/beige tones visible across the whole width. */}
+      <div aria-hidden className="absolute inset-y-0 start-0 end-0 z-0">
+        <img
+          src={HERO_BG}
+          alt=""
+          draggable="false"
+          decoding="async"
+          fetchPriority="high"
+          className={
+            'h-full w-full select-none object-cover ' +
+            (isRtl
+              ? 'origin-center -scale-x-100 object-left'
+              : 'object-right')
+          }
+        />
+      </div>
+
+      {/* Layer 2 — content (title + search form + stat cards), lifted above
+          the artwork. Every wrapper stays transparent so the image shows
+          through everywhere; only the form and the stat cards themselves
+          keep their own white background + shadow to "pop". */}
+      <div
+        className={`relative z-10 mx-auto bg-transparent ${SITE_MAX_WIDTH_CLASS} lg:min-h-[min(86vw,520px)]`}
+      >
+        <div className={`flex justify-start bg-transparent ${SITE_GUTTER_CLASS}`}>
+          <div
+            className={
+              'w-full min-w-0 max-w-full bg-transparent pt-14 pb-10 text-start sm:pt-16 sm:pb-12 lg:max-w-[50%] lg:pt-20 lg:pb-14 ' +
+              (isRtl ? 'lg:ps-8 xl:ps-12' : 'lg:pe-8 xl:pe-12')
+            }
+          >
+            <h1
+              className="text-balance text-4xl font-extrabold leading-[1.03] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl"
+              style={{
+                // Subtle white glow so the heading stays legible over the
+                // colorful artwork without needing any solid background.
+                textShadow:
+                  '0 1px 2px rgba(255,255,255,0.85), 0 0 14px rgba(255,255,255,0.55)',
+              }}
+            >
+              {t('hero.titlePart1')} <span className="text-brand-500">{t('hero.titleHighlight')}</span>
             </h1>
-            <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-500 sm:text-[15px]">
-              Des bonnes affaires près de chez vous, avec des annonces vidéo comme sur mobile.
+            <p
+              className="mt-3 max-w-xl text-sm leading-relaxed text-slate-700 sm:text-[15px]"
+              style={{
+                textShadow: '0 1px 1px rgba(255,255,255,0.7)',
+              }}
+            >
+              {t('hero.subtitle')}
             </p>
 
             <form
@@ -99,8 +121,8 @@ export default function Hero({
                       type="search"
                       value={searchQuery}
                       onChange={(e) => onSearchChange(e.target.value)}
-                      placeholder="Que recherchez-vous ?"
-                      aria-label="Recherche"
+                      placeholder={t('hero.searchPlaceholder')}
+                      aria-label={t('hero.searchAria')}
                       className="min-h-0 min-w-0 flex-1 bg-transparent py-0.5 text-[13px] text-slate-900 placeholder:text-slate-400 outline-none sm:text-sm"
                     />
                   </label>
@@ -109,19 +131,19 @@ export default function Hero({
                     <select
                       value={selectedCategory || ''}
                       onChange={(e) => onCategoryChange(e.target.value || null)}
-                      aria-label="Catégorie"
-                      className="h-full min-h-[38px] w-full cursor-pointer appearance-none bg-white py-1.5 pr-8 pl-2.5 text-[13px] font-medium text-slate-800 outline-none sm:text-sm"
+                      aria-label={t('hero.categoryAria')}
+                      className="h-full min-h-[38px] w-full cursor-pointer appearance-none bg-white py-1.5 pe-8 ps-2.5 text-start text-[13px] font-medium text-slate-800 outline-none sm:text-sm"
                     >
-                      <option value="">Toutes les catégories</option>
+                      <option value="">{t('hero.allCategories')}</option>
                       {CATEGORIES.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {CATEGORY_FR[c.id] || c.label}
+                          {CATEGORY_I18N_KEYS[c.id] ? t(CATEGORY_I18N_KEYS[c.id]) : c.label}
                         </option>
                       ))}
                     </select>
                     <Icon
                       name="chevronDown"
-                      className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-500"
+                      className="pointer-events-none absolute end-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-500"
                     />
                   </div>
 
@@ -129,10 +151,10 @@ export default function Hero({
                     <select
                       value={selectedCity || ''}
                       onChange={(e) => onCityChange?.(e.target.value || null)}
-                      aria-label="Ville"
-                      className="h-full min-h-[38px] w-full cursor-pointer appearance-none bg-white py-1.5 pr-8 pl-2.5 text-[13px] font-medium text-slate-800 outline-none sm:text-sm"
+                      aria-label={t('hero.cityAria')}
+                      className="h-full min-h-[38px] w-full cursor-pointer appearance-none bg-white py-1.5 pe-8 ps-2.5 text-start text-[13px] font-medium text-slate-800 outline-none sm:text-sm"
                     >
-                      <option value="">Toute la ville</option>
+                      <option value="">{t('hero.allCities')}</option>
                       {CITIES.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.label}
@@ -141,15 +163,15 @@ export default function Hero({
                     </select>
                     <Icon
                       name="chevronDown"
-                      className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-500"
+                      className="pointer-events-none absolute end-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-500"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="min-h-[38px] shrink-0 bg-brand-500 px-5 py-2 text-[13px] font-semibold text-white transition hover:bg-brand-600 sm:rounded-r-full sm:px-7 sm:text-sm"
+                    className="min-h-[38px] shrink-0 bg-brand-500 px-5 py-2 text-[13px] font-semibold text-white transition hover:bg-brand-600 sm:rounded-e-full sm:px-7 sm:text-sm"
                   >
-                    Rechercher
+                    {t('hero.submit')}
                   </button>
                 </div>
               </div>
@@ -157,7 +179,7 @@ export default function Hero({
 
             <div className="mt-4 max-w-xl">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2">
-              {HERO_STATS.map((s) => (
+              {HERO_STAT_DEFS.map((s) => (
                 <div
                   key={s.id}
                   className="flex items-center gap-1.5 rounded-lg border border-slate-200/70 bg-white px-2 py-1.5 shadow-[0_1px_8px_rgba(15,23,42,0.05)]"
@@ -168,7 +190,7 @@ export default function Hero({
                     <Icon name={s.icon} className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                   </span>
                   <span className="text-[9px] font-semibold leading-tight text-slate-800 sm:text-[10px]">
-                    {s.label}
+                    {t(s.tKey)}
                   </span>
                 </div>
               ))}

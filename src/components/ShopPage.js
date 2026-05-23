@@ -11,6 +11,7 @@ export default function ShopPage({
   sellerId,
   onRequireLogin,
   onPlay,
+  onOpenListing,
   onEdit,
   onNavigateHome,
   onVisitShop,
@@ -151,6 +152,7 @@ export default function ShopPage({
                 isFavorite={favIds.has(ad.id)}
                 onRequireLogin={onRequireLogin}
                 onPlay={onPlay}
+                onOpenDetail={onOpenListing ? (a) => onOpenListing(a.id) : undefined}
                 onEdit={onEdit}
                 sellerProfile={seller && ad.ownerUid === sellerId ? seller : undefined}
                 showVisitShop={false}

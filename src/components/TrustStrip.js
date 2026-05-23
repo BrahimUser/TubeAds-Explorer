@@ -1,43 +1,21 @@
 // Trust bar — copy aligned with marketplace reference.
+import { useTranslation } from 'react-i18next';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 
-const ITEMS = [
-  {
-    id: 'pay',
-    title: 'Paiement sécurisé',
-    body: 'Payez en toute sécurité',
-    tone: 'bg-emerald-50 text-emerald-600',
-    icon: ShieldPayIcon,
-  },
-  {
-    id: 'ship',
-    title: 'Livraison disponible',
-    body: 'Partout au Maroc',
-    tone: 'bg-amber-50 text-amber-600',
-    icon: TruckIcon,
-  },
-  {
-    id: 'support',
-    title: 'Support 24/7',
-    body: 'Nous sommes là pour vous',
-    tone: 'bg-violet-50 text-violet-600',
-    icon: HeadsetIcon,
-  },
-  {
-    id: 'return',
-    title: 'Satisfait ou remboursé',
-    body: 'Retour simple et rapide',
-    tone: 'bg-sky-50 text-sky-600',
-    icon: RefreshIcon,
-  },
+const ITEM_DEFS = [
+  { id: 'pay', titleKey: 'trust.securePayment', bodyKey: 'trust.securePaymentSub', tone: 'bg-emerald-50 text-emerald-600', icon: ShieldPayIcon },
+  { id: 'ship', titleKey: 'trust.delivery', bodyKey: 'trust.deliverySub', tone: 'bg-amber-50 text-amber-600', icon: TruckIcon },
+  { id: 'support', titleKey: 'trust.support', bodyKey: 'trust.supportSub', tone: 'bg-violet-50 text-violet-600', icon: HeadsetIcon },
+  { id: 'return', titleKey: 'trust.moneyBack', bodyKey: 'trust.moneyBackSub', tone: 'bg-sky-50 text-sky-600', icon: RefreshIcon },
 ];
 
 export default function TrustStrip() {
+  const { t } = useTranslation();
   return (
     <section className="bg-slate-100/90">
       <div className={`mx-auto ${SITE_MAX_WIDTH_CLASS} py-8 ${SITE_GUTTER_CLASS}`}>
         <div className="grid grid-cols-1 divide-y divide-slate-200/90 rounded-2xl border border-slate-200/90 bg-white shadow-sm sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-          {ITEMS.map((item) => {
+          {ITEM_DEFS.map((item) => {
             const I = item.icon;
             return (
               <div key={item.id} className="flex items-center gap-3 px-4 py-4 sm:py-5">
@@ -47,8 +25,8 @@ export default function TrustStrip() {
                   <I className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-900">{item.title}</div>
-                  <div className="text-xs text-slate-500">{item.body}</div>
+                  <div className="text-sm font-semibold text-slate-900">{t(item.titleKey)}</div>
+                  <div className="text-xs text-slate-500">{t(item.bodyKey)}</div>
                 </div>
               </div>
             );

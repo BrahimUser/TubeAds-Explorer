@@ -2,34 +2,51 @@
  * Marketplace header — reference layout: brand, centered search, Catégories / Messages + utilities.
  */
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import useIsAdmin from '../hooks/useIsAdmin';
 import { APP_NAME } from '../constants/branding';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
+import { LOCALE_STORAGE_KEY, SUPPORTED_LANGUAGES, applyLanguageToDocument } from '../i18n';
+import { listenUnreadNotificationsCount } from '../services/notifications';
 import { Icon } from './Icons';
 
-const MOBILE_NAV = [
-  { id: 'home', label: 'Accueil' },
-  { id: 'categories', label: 'Catégories' },
-  { id: 'listings', label: 'Annonces' },
-  { id: 'messages', label: 'Messages' },
-];
-
 const LANGS = [
-  { code: 'en', label: 'EN' },
-  { code: 'fr', label: 'FR' },
-  { code: 'ar', label: 'AR' },
+  { code: 'en', label: 'EN', flag: '🇬🇧' },
+  { code: 'fr', label: 'FR', flag: '🇫🇷' },
+  { code: 'ar', label: 'AR', flag: '🇲🇦' },
 ];
 
-const LOCALE_STORAGE = 'marketplace-locale';
-
-function accountLabel(user) {
+function accountLabel(user, fallback) {
   if (!user) return '';
+  const phone = user.phoneNumber?.replace(/\s/g, '');
+  if (phone) {
+    const n = phone.replace(/^\+212/, '');
+    if (n.length >= 4) return `+212 …${n.slice(-4)}`;
+    return phone;
+  }
   const d = user.displayName?.trim();
   if (d) return d.split(/\s+/)[0];
   const email = user.email?.trim();
   if (email) return email.split('@')[0];
-  return 'Compte';
+  return fallback;
+}
+
+function accountSubtitle(user) {
+  if (!user) return '';
+  if (user.phoneNumber) return user.phoneNumber;
+  return user.email || '';
+}
+
+function avatarLetter(user) {
+  if (!user) return '?';
+  const d = user.displayName?.trim();
+  if (d) return d[0].toUpperCase();
+  const em = user.email?.trim();
+  if (em) return em[0].toUpperCase();
+  const digits = user.phoneNumber?.replace(/\D/g, '') || '';
+  if (digits.length) return digits.slice(-1);
+  return '?';
 }
 
 export default function Header({
@@ -37,6 +54,7 @@ export default function Header({
   onNavigate,
   onOpenMessages,
   onLogin,
+  onVisitOwnShop,
   onAdminDashboard,
   transparent = false,
   locale,
@@ -45,21 +63,52 @@ export default function Header({
   onSearchChange,
   onSearchSubmit,
 }) {
-  const { user, signOut } = useAuth();
+  const { t, i18n } = useTranslation();
+  const { user, signOut, role } = useAuth();
   const { isAdmin, ready } = useIsAdmin();
   const [accountOpen, setAccountOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const langWrapRef = useRef(null);
+  const accountWrapRef = useRef(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifWrapRef = useRef(null);
 
   useEffect(() => {
     function onDocClick(e) {
       if (langWrapRef.current && !langWrapRef.current.contains(e.target)) {
         setLangOpen(false);
       }
+      if (notifWrapRef.current && !notifWrapRef.current.contains(e.target)) {
+        setNotifOpen(false);
+      }
+      if (accountWrapRef.current && !accountWrapRef.current.contains(e.target)) {
+        setAccountOpen(false);
+      }
     }
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0);
+      setNotifOpen(false);
+      return undefined;
+    }
+    return listenUnreadNotificationsCount(
+      user.uid,
+      (count) => setUnreadCount(count || 0),
+      (err) => console.warn('notifications listener', err),
+    );
+  }, [user]);
+
+  const MOBILE_NAV = [
+    { id: 'home', label: t('navbar.home') },
+    { id: 'categories', label: t('navbar.categories') },
+    { id: 'listings', label: t('navbar.listings') },
+    { id: 'messages', label: t('navbar.messages') },
+  ];
 
   function handleNav(id) {
     if (id === 'messages') {
@@ -70,29 +119,30 @@ export default function Header({
   }
 
   const resolvedLocale =
-    locale ||
-    (typeof window !== 'undefined' ? localStorage.getItem(LOCALE_STORAGE) || 'fr' : 'fr');
+    (locale && SUPPORTED_LANGUAGES.includes(locale) ? locale : null) ||
+    i18n.language ||
+    (typeof window !== 'undefined' ? localStorage.getItem(LOCALE_STORAGE_KEY) || 'fr' : 'fr');
 
   function pickLang(code) {
+    if (!SUPPORTED_LANGUAGES.includes(code)) return;
     onLocaleChange?.(code);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(LOCALE_STORAGE, code);
-      document.documentElement.lang = code === 'ar' ? 'ar' : code === 'en' ? 'en' : 'fr';
-      document.documentElement.dir = code === 'ar' ? 'rtl' : 'ltr';
-    }
+    i18n.changeLanguage(code);
+    applyLanguageToDocument(code);
     setLangOpen(false);
   }
 
   useEffect(() => {
-    const code =
-      locale ||
-      (typeof window !== 'undefined' ? localStorage.getItem(LOCALE_STORAGE) : null) ||
-      'fr';
-    document.documentElement.lang = code === 'ar' ? 'ar' : code === 'en' ? 'en' : 'fr';
-    document.documentElement.dir = code === 'ar' ? 'rtl' : 'ltr';
-  }, [locale]);
+    if (!locale) return;
+    if (i18n.language !== locale) {
+      i18n.changeLanguage(locale);
+    }
+    applyLanguageToDocument(locale);
+  }, [locale, i18n]);
 
-  const langLabel = LANGS.find((l) => l.code === resolvedLocale)?.label ?? 'FR';
+  const currentLang = LANGS.find((l) => l.code === resolvedLocale) || LANGS[1];
+  const langLabel = currentLang.label;
+  const langFlag = currentLang.flag;
+  const isRtl = resolvedLocale === 'ar' || i18n.language === 'ar';
 
   const headerClass = transparent
     ? 'sticky top-0 z-50 border-b border-slate-200/70 bg-white/95 shadow-[0_1px_0_rgba(15,23,42,0.05)]'
@@ -106,7 +156,7 @@ export default function Header({
             <a
               href="/"
               className="flex shrink-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
-              aria-label={`${APP_NAME} · Accueil`}
+              aria-label={`${APP_NAME} · ${t('navbar.home')}`}
               onClick={(e) => {
                 e.preventDefault();
                 handleNav('home');
@@ -137,24 +187,14 @@ export default function Header({
                   type="search"
                   value={searchQuery}
                   onChange={(e) => onSearchChange?.(e.target.value)}
-                  placeholder="Rechercher une voiture, un téléphone…"
-                  aria-label="Recherche"
+                  placeholder={t('navbar.searchPlaceholder')}
+                  aria-label={t('navbar.search')}
                   className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none"
                 />
               </label>
             </form>
 
-            <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
-              {ready && isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => onAdminDashboard?.()}
-                  className="mr-1 hidden rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-600 transition hover:bg-brand-50 lg:inline-flex"
-                >
-                  Admin
-                </button>
-              )}
-
+            <div className="ms-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
               <button
                 type="button"
                 onClick={() => handleNav('categories')}
@@ -166,7 +206,7 @@ export default function Header({
                 }
               >
                 <Icon name="grid" className="h-4 w-4" />
-                <span className="hidden lg:inline">Catégories</span>
+                <span className="hidden lg:inline">{t('navbar.categories')}</span>
               </button>
 
               <button
@@ -180,17 +220,66 @@ export default function Header({
                 }
               >
                 <Icon name="message" className="h-4 w-4" />
-                <span className="hidden lg:inline">Messages</span>
+                <span className="hidden lg:inline">{t('navbar.messages')}</span>
               </button>
 
-              <button
-                type="button"
-                className="relative grid h-11 w-11 place-items-center rounded-full text-slate-700 transition hover:bg-slate-50"
-                aria-label="Notifications"
-              >
-                <Icon name="bell" className="h-5 w-5" />
-                <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-brand-500 shadow-sm" />
-              </button>
+              <div className="relative" ref={notifWrapRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNotifOpen((v) => !v);
+                  }}
+                  className="relative grid h-11 w-11 place-items-center rounded-full text-slate-700 transition hover:bg-slate-50"
+                  aria-label={t('navbar.notifications')}
+                  aria-expanded={notifOpen}
+                  aria-haspopup="menu"
+                >
+                  <Icon name="bell" className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    unreadCount <= 9 ? (
+                      <span className="absolute -top-0.5 end-0.5 grid h-5 min-w-[20px] place-items-center rounded-full bg-red-500 px-1 text-[11px] font-extrabold leading-none text-white shadow-sm">
+                        {unreadCount}
+                      </span>
+                    ) : (
+                      <span className="absolute -top-0.5 end-0.5 grid h-5 min-w-[20px] place-items-center rounded-full bg-red-500 px-1 text-[10px] font-extrabold leading-none text-white shadow-sm">
+                        9+
+                      </span>
+                    )
+                  )}
+                </button>
+
+                {notifOpen && (
+                  <div
+                    role="menu"
+                    className={
+                      'absolute z-[999] mt-2 w-[min(360px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl ' +
+                      (isRtl ? 'start-0' : 'end-0')
+                    }
+                  >
+                    <div className="border-b border-slate-100 px-4 py-3">
+                      <div className="text-sm font-extrabold text-slate-900">
+                        {t('navbar.notifications')}
+                      </div>
+                      <div className="mt-0.5 text-xs text-slate-500">
+                        {unreadCount > 0 ? `${unreadCount} non lue(s)` : 'Aucune notification non lue'}
+                      </div>
+                    </div>
+
+                    {/* Hardcoded test notification to validate UI/positioning. */}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="w-full px-4 py-3 text-start hover:bg-slate-50"
+                      onClick={() => setNotifOpen(false)}
+                    >
+                      <div className="text-sm font-semibold text-slate-900">
+                        Test: Vous avez un nouveau message
+                      </div>
+                      <div className="mt-0.5 text-xs text-slate-500">À l’instant</div>
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <div className="relative" ref={langWrapRef}>
                 <button
@@ -200,14 +289,14 @@ export default function Header({
                   onClick={() => setLangOpen((v) => !v)}
                   className="inline-flex h-11 items-center gap-1 rounded-full px-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:px-3"
                 >
-                  <Icon name="globe" className="h-5 w-5 shrink-0" />
-                  <span className="min-w-[28px] text-left">{langLabel}</span>
+                  <span aria-hidden className="text-base leading-none">{langFlag}</span>
+                  <span className="min-w-[28px] text-start">{langLabel}</span>
                   <Icon name="chevronDown" className="h-3.5 w-3.5 shrink-0 text-slate-500" />
                 </button>
                 {langOpen && (
                   <ul
                     role="listbox"
-                    className="absolute right-0 z-[60] mt-1 w-36 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-lg"
+                    className="absolute end-0 z-[60] mt-1 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-lg"
                   >
                     {LANGS.map((l) => (
                       <li key={l.code}>
@@ -217,11 +306,12 @@ export default function Header({
                           aria-selected={resolvedLocale === l.code}
                           onClick={() => pickLang(l.code)}
                           className={
-                            'flex w-full items-center px-3 py-2 text-left hover:bg-slate-50 ' +
+                            'flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50 ' +
                             (resolvedLocale === l.code ? 'font-semibold text-brand-600' : '')
                           }
                         >
-                          {l.label}
+                          <span aria-hidden className="text-base leading-none">{l.flag}</span>
+                          <span>{l.label}</span>
                         </button>
                       </li>
                     ))}
@@ -229,80 +319,136 @@ export default function Header({
                 )}
               </div>
 
-              {user ? (
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setAccountOpen((o) => !o)}
-                    aria-expanded={accountOpen}
-                    aria-haspopup="menu"
-                    className="flex max-w-[140px] items-center gap-1.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-slate-50"
-                    aria-label="Compte"
-                  >
-                    <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700 ring-2 ring-white">
-                      {(user.email || user.displayName || '?').slice(0, 1).toUpperCase()}
-                    </span>
-                    <span className="hidden truncate text-sm font-semibold text-slate-800 min-[900px]:inline">
-                      {accountLabel(user)}
-                    </span>
-                    <Icon name="chevronDown" className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-                  </button>
-                  {accountOpen && (
-                    <div
-                      role="menu"
-                      onMouseLeave={() => setAccountOpen(false)}
-                      className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-xl"
-                    >
-                      <div className="truncate px-3 py-2 text-xs text-slate-500">
-                        {user.email}
-                      </div>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="w-full px-3 py-2 text-left hover:bg-slate-50"
-                        onClick={() => {
-                          setAccountOpen(false);
-                          onNavigate?.('orders');
-                        }}
-                      >
-                        Mes commandes
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="w-full px-3 py-2 text-left hover:bg-slate-50"
-                        onClick={() => {
-                          setAccountOpen(false);
-                          onOpenMessages?.();
-                        }}
-                      >
-                        Messages
-                      </button>
-                      <div className="my-1 border-t border-slate-100" />
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50"
-                        onClick={() => {
-                          setAccountOpen(false);
-                          signOut();
-                        }}
-                      >
-                        Déconnexion
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
+              <div className="relative" ref={accountWrapRef}>
                 <button
                   type="button"
-                  onClick={() => onLogin?.()}
-                  className="grid h-11 w-11 place-items-center rounded-full text-slate-700 transition hover:bg-slate-50"
-                  aria-label="Connexion"
+                  onClick={() => setAccountOpen((o) => !o)}
+                  aria-expanded={accountOpen}
+                  aria-haspopup="menu"
+                  className="flex max-w-[160px] items-center gap-1.5 rounded-full py-1 ps-1 pe-2 transition hover:bg-orange-50/80"
+                  aria-label={t('navbar.account')}
                 >
-                  <Icon name="user" className="h-5 w-5" />
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-brand-100 to-orange-100 text-sm font-semibold text-brand-700 ring-2 ring-white">
+                    {user ? avatarLetter(user) : <Icon name="user" className="h-4 w-4" />}
+                  </span>
+                  {user && (
+                    <span className="hidden max-w-[88px] truncate text-sm font-semibold text-slate-800 min-[900px]:inline">
+                      {accountLabel(user, t('navbar.account'))}
+                    </span>
+                  )}
+                  <Icon name="chevronDown" className="h-3.5 w-3.5 shrink-0 text-slate-500" />
                 </button>
-              )}
+
+                {accountOpen && (
+                  <div
+                    role="menu"
+                    className={
+                      'absolute z-[90] mt-2 w-[min(100vw-2rem,260px)] overflow-hidden rounded-2xl border border-orange-100 bg-white py-1.5 text-sm shadow-xl ring-1 ring-orange-50 ' +
+                      (isRtl ? 'start-0' : 'end-0')
+                    }
+                  >
+                    {user ? (
+                      <>
+                        <div className="border-b border-orange-50 px-3 py-2.5">
+                          <div className="truncate text-xs font-medium text-slate-500">
+                            {accountSubtitle(user)}
+                          </div>
+                          {role === 'admin' && (
+                            <button
+                              type="button"
+                              className="mt-2 w-full rounded-lg bg-orange-500 px-2 py-2.5 text-center text-xs font-extrabold uppercase tracking-wide text-white shadow-sm ring-1 ring-orange-600 hover:bg-orange-600"
+                              onClick={() => {
+                                setAccountOpen(false);
+                                onAdminDashboard?.();
+                              }}
+                            >
+                              ACCÈS ADMIN
+                            </button>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center gap-3 px-3 py-2.5 text-start font-medium text-slate-800 transition hover:bg-orange-50/80"
+                          onClick={() => {
+                            setAccountOpen(false);
+                            onVisitOwnShop?.();
+                          }}
+                        >
+                          <Icon name="user" className="h-4 w-4 shrink-0 text-brand-600" />
+                          {t('navbar.myProfile')}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center gap-3 px-3 py-2.5 text-start font-medium text-slate-800 transition hover:bg-orange-50/80"
+                          onClick={() => {
+                            setAccountOpen(false);
+                            onNavigate?.('myads');
+                          }}
+                        >
+                          <Icon name="fileText" className="h-4 w-4 shrink-0 text-brand-600" />
+                          {t('navbar.myAds')}
+                        </button>
+                        {ready && isAdmin && (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-3 px-3 py-2.5 text-start font-medium text-slate-800 transition hover:bg-orange-50/80"
+                            onClick={() => {
+                              setAccountOpen(false);
+                              onAdminDashboard?.();
+                            }}
+                          >
+                            <Icon name="shield" className="h-4 w-4 shrink-0 text-brand-600" />
+                            {t('navbar.adminDashboard')}
+                          </button>
+                        )}
+                        <div className="my-1 border-t border-orange-50" />
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center gap-3 px-3 py-2.5 text-start font-medium text-slate-700 transition hover:bg-orange-50/80"
+                          onClick={() => {
+                            setAccountOpen(false);
+                            signOut();
+                          }}
+                        >
+                          <Icon name="logout" className="h-4 w-4 shrink-0 text-brand-600" />
+                          {t('navbar.logout')}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center gap-3 px-3 py-2.5 text-start font-semibold text-slate-800 transition hover:bg-orange-50/80"
+                          onClick={() => {
+                            setAccountOpen(false);
+                            onLogin?.('signin');
+                          }}
+                        >
+                          <Icon name="user" className="h-4 w-4 shrink-0 text-brand-600" />
+                          {t('navbar.profileSignIn')}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center gap-3 px-3 py-2.5 text-start font-semibold text-slate-800 transition hover:bg-orange-50/80"
+                          onClick={() => {
+                            setAccountOpen(false);
+                            onLogin?.('signup');
+                          }}
+                        >
+                          <Icon name="plus" className="h-4 w-4 shrink-0 text-brand-600" />
+                          {t('navbar.profileSignUp')}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -320,8 +466,8 @@ export default function Header({
                 type="search"
                 value={searchQuery}
                 onChange={(e) => onSearchChange?.(e.target.value)}
-                placeholder="Rechercher une voiture, un téléphone…"
-                aria-label="Recherche"
+                placeholder={t('navbar.searchPlaceholder')}
+                aria-label={t('navbar.search')}
                 className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none"
               />
             </label>
@@ -330,7 +476,7 @@ export default function Header({
 
         <nav
           className="flex gap-1 overflow-x-auto pb-3 md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          aria-label="Navigation mobile"
+          aria-label={t('navbar.mobileNav')}
         >
           {MOBILE_NAV.map((item) => {
             const active = activeNavId === item.id;
@@ -348,15 +494,6 @@ export default function Header({
               </button>
             );
           })}
-          {ready && isAdmin && (
-            <button
-              type="button"
-              onClick={() => onAdminDashboard?.()}
-              className="whitespace-nowrap rounded-full border border-brand-200 bg-brand-50 px-4 py-1.5 text-sm font-semibold text-brand-700"
-            >
-              Admin
-            </button>
-          )}
         </nav>
       </div>
     </header>

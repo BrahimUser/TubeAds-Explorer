@@ -3,7 +3,7 @@
 // Same Firebase project as the React Native app, so the website shares
 // listings, favorites and chat threads with mobile users — Le360-style.
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { browserLocalPersistence, getAuth, setPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
@@ -19,6 +19,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
+// Keep session across reloads (localStorage / browser persistence — Spark-friendly).
+setPersistence(auth, browserLocalPersistence).catch(() => {});
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 

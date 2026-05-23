@@ -6,6 +6,7 @@
 // (youtubeVideoId, videoUrl, camelCase/snake_case, etc.).
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -24,6 +25,9 @@ import { categoryFirestoreValue } from './categories';
  */
 export const ANNONCES_COLLECTION = 'listings';
 
+/** Canonical fields for **new** writes: camelCase `priceCents`, `youtubeVideoId`, `ownerUid`, `status`, …
+ * (`parseAd` still reads legacy keys like `prix`, `titre`, `price_cents` for old documents.)
+ */
 function normCat(s) {
   return String(s ?? '')
     .trim()
@@ -77,6 +81,13 @@ function coercePriceCents(raw) {
     const n = Number.parseFloat(raw.price.replace(',', '.'));
     if (Number.isFinite(n)) return Math.round(n * 100);
   }
+  if (typeof raw.prix === 'number' && Number.isFinite(raw.prix)) {
+    return Math.round(raw.prix * 100);
+  }
+  if (typeof raw.prix === 'string' && raw.prix.trim()) {
+    const n = Number.parseFloat(String(raw.prix).replace(',', '.'));
+    if (Number.isFinite(n)) return Math.round(n * 100);
+  }
   return 0;
 }
 
@@ -120,6 +131,29 @@ export function parseAd(id, raw) {
     (Array.isArray(raw.images) && typeof raw.images[0] === 'string' && raw.images[0]) ||
     (yt ? `https://i.ytimg.com/vi/${yt}/hqdefault.jpg` : '');
 
+  const imageUrls = (() => {
+    const out = [];
+    if (Array.isArray(raw.images)) {
+      for (const u of raw.images) {
+        if (typeof u === 'string' && u.trim()) out.push(u.trim());
+      }
+    }
+    const single =
+      (typeof raw.imageUrl === 'string' && raw.imageUrl.trim()) ||
+      (typeof raw.image_url === 'string' && raw.image_url.trim()) ||
+      '';
+    if (single && !out.includes(single)) out.unshift(single);
+    const seen = new Set();
+    const deduped = out.filter((u) => {
+      if (seen.has(u)) return false;
+      seen.add(u);
+      return true;
+    });
+    if (deduped.length > 0) return deduped;
+    if (thumbnailUrl) return [thumbnailUrl];
+    return [];
+  })();
+
   return {
     id,
     title: String(raw.title ?? raw.name ?? raw.titre ?? ''),
@@ -135,6 +169,7 @@ export function parseAd(id, raw) {
       rawVideoUrl ||
       (yt ? `https://www.youtube.com/watch?v=${yt}` : ''),
     thumbnailUrl,
+    imageUrls,
     ownerUid: String(
       raw.ownerUid ?? raw.owner_uid ?? raw.userId ?? raw.user_id ?? '',
     ),
@@ -162,31 +197,28 @@ function timestampMs(ts) {
   return 0;
 }
 
-/** Live feed sorted newest-first. Read-only browse — no uploads on web. */
-export function listenAds({ category, max = 60 } = {}, onChange, onError) {
+/**
+ * Public marketplace feed: real-time `onSnapshot` — UI updates immediately when
+ * an admin sets `status` to `approved` (no manual refresh).
+ */
+export function listenAds({ max = 120 } = {}, onChange, onError) {
   return onSnapshot(
-    query(collection(db, ANNONCES_COLLECTION)),
+    query(collection(db, ANNONCES_COLLECTION), where('status', '==', 'approved')),
     (snapshot) => {
-      // eslint-disable-next-line no-console
-      console.log('Docs fetched:', snapshot.docs.length);
       const items = snapshot.docs.map((d) => parseAd(d.id, d.data()));
       items.sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt));
-      // Read EVERYTHING first (no where() filters, and no category filtering here).
-      // Category/search filtering is handled in the UI layer.
       onChange(items.slice(0, max));
     },
     (err) => {
       // eslint-disable-next-line no-console
-      console.error(`[${ANNONCES_COLLECTION}]`, err);
+      console.error(`[${ANNONCES_COLLECTION}] approved feed`, err);
       onError?.(err);
     },
   );
 }
 
 /**
- * Moderation queue: every listing with `status == "pending"` in Firestore.
- * Uses a targeted query so pending ads are not lost when `listenAds` slices
- * to the N newest documents only.
+ * Moderation queue: real-time `onSnapshot` on `status == "pending"`.
  */
 export function listenPendingAds(onChange, onError) {
   return onSnapshot(
@@ -207,22 +239,74 @@ export function listenPendingAds(onChange, onError) {
 }
 
 /**
- * All listings owned by a user (Boutique / seller page).
+ * All listings owned by a user (Boutique / seller page, “Mes annonces”).
+ * Merges `ownerUid` and `userId` queries so legacy mobile docs that only set
+ * `userId` still appear without scanning the whole collection.
  */
 export function listenListingsByOwner(ownerUid, onChange, onError) {
   if (!ownerUid) {
     onChange([]);
     return () => {};
   }
-  return onSnapshot(
+  const byOwner = new Map();
+  const byUserId = new Map();
+  const byUserSnake = new Map();
+
+  function emit() {
+    const merged = new Map();
+    for (const [id, ad] of byUserSnake) merged.set(id, ad);
+    for (const [id, ad] of byUserId) merged.set(id, ad);
+    for (const [id, ad] of byOwner) merged.set(id, ad);
+    const items = [...merged.values()].sort(
+      (a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt),
+    );
+    onChange(items);
+  }
+
+  const unsubOwner = onSnapshot(
     query(collection(db, ANNONCES_COLLECTION), where('ownerUid', '==', ownerUid)),
     (snapshot) => {
-      const items = snapshot.docs.map((d) => parseAd(d.id, d.data()));
-      items.sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt));
-      onChange(items);
+      byOwner.clear();
+      for (const d of snapshot.docs) {
+        byOwner.set(d.id, parseAd(d.id, d.data()));
+      }
+      emit();
     },
     (err) => onError?.(err),
   );
+  const unsubUserId = onSnapshot(
+    query(collection(db, ANNONCES_COLLECTION), where('userId', '==', ownerUid)),
+    (snapshot) => {
+      byUserId.clear();
+      for (const d of snapshot.docs) {
+        byUserId.set(d.id, parseAd(d.id, d.data()));
+      }
+      emit();
+    },
+    (err) => {
+      // eslint-disable-next-line no-console
+      console.warn(`[${ANNONCES_COLLECTION}] listenListingsByOwner userId`, err);
+    },
+  );
+  const unsubUserSnake = onSnapshot(
+    query(collection(db, ANNONCES_COLLECTION), where('user_id', '==', ownerUid)),
+    (snapshot) => {
+      byUserSnake.clear();
+      for (const d of snapshot.docs) {
+        byUserSnake.set(d.id, parseAd(d.id, d.data()));
+      }
+      emit();
+    },
+    (err) => {
+      // eslint-disable-next-line no-console
+      console.warn(`[${ANNONCES_COLLECTION}] listenListingsByOwner user_id`, err);
+    },
+  );
+  return () => {
+    unsubOwner();
+    unsubUserId();
+    unsubUserSnake();
+  };
 }
 
 export async function getAd(adId) {
@@ -237,6 +321,11 @@ export async function updateAd(adId, patch) {
   await updateDoc(doc(db, ANNONCES_COLLECTION, adId), patch);
 }
 
+export async function deleteAd(adId) {
+  if (!adId) throw new Error('Missing adId');
+  await deleteDoc(doc(db, ANNONCES_COLLECTION, adId));
+}
+
 export async function approveListing(adId) {
   if (!adId) throw new Error('Missing adId');
   await updateDoc(doc(db, ANNONCES_COLLECTION, adId), {
@@ -245,25 +334,20 @@ export async function approveListing(adId) {
   });
 }
 
-/**
- * Visible on public home grid: moderated `approved`.
- * Legacy: mobile app historically wrote `active` — treated as approved until migrated.
- */
+export async function rejectListing(adId) {
+  if (!adId) throw new Error('Missing adId');
+  await updateDoc(doc(db, ANNONCES_COLLECTION, adId), {
+    status: 'rejected',
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Visible on public home, search, and seller shop browse: `approved` only. */
 export function adIsVisibleOnPublicHome(ad) {
   const s = String(ad?.status ?? '').toLowerCase();
-  return s === 'approved' || s === 'active';
+  return s === 'approved';
 }
 
 export function listenMyAds(uid, onChange, onError) {
-  return onSnapshot(
-    query(collection(db, ANNONCES_COLLECTION)),
-    (snap) => {
-      const mine = snap.docs
-        .map((d) => parseAd(d.id, d.data()))
-        .filter((ad) => ad.ownerUid === uid);
-      mine.sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt));
-      onChange(mine);
-    },
-    (err) => onError?.(err),
-  );
+  return listenListingsByOwner(uid, onChange, onError);
 }

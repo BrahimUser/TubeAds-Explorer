@@ -1,13 +1,16 @@
 /**
  * Accueil marketplace : Hero + catégories + rangée annonces (~75 %) + sidebar widgets (~25 %).
  */
+import { useTranslation } from 'react-i18next';
 import Hero from './Hero';
 import CategoryGrid from './CategoryGrid';
 import RecentListings from './RecentListings';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 
-/** Aperçu accueil : 3 annonces sur une seule ligne (desktop). */
-export const HOME_LISTINGS_PREVIEW = 3;
+/** Aperçu accueil : 8 annonces (2 rangées × 4 colonnes) qui s’alignent avec
+ *  la pile sidebar (Populaires + Top vendeurs) à droite.
+ */
+export const HOME_LISTINGS_PREVIEW = 8;
 
 export default function Home({
   isHomeMarketplace,
@@ -21,11 +24,14 @@ export default function Home({
   onHeroSearchSubmit,
   onRequireLogin,
   onPlay,
+  onOpenListing,
   onEditAd,
   onVisitShop,
   previewLimitHome,
   onViewAllHome,
+  onViewAllSellers,
 }) {
+  const { t } = useTranslation();
   return (
     <>
       {isHomeMarketplace && (
@@ -49,10 +55,10 @@ export default function Home({
         <div className="border-b border-slate-200 bg-white">
           <div className={`mx-auto ${SITE_MAX_WIDTH_CLASS} py-8 ${SITE_GUTTER_CLASS}`}>
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-[1.75rem]">
-              Toutes les annonces
+              {t('listings.pageTitle')}
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              Parcourez toutes les annonces publiées sur la marketplace.
+              {t('listings.pageSubtitle')}
             </p>
           </div>
         </div>
@@ -65,10 +71,12 @@ export default function Home({
           cityFilter={cityFilter}
           onRequireLogin={onRequireLogin}
           onPlay={onPlay}
+          onOpenListing={onOpenListing}
           onEdit={onEditAd}
           onVisitShop={onVisitShop}
           previewLimit={typeof previewLimitHome === 'number' ? previewLimitHome : null}
           onViewAll={onViewAllHome}
+          onViewAllSellers={onViewAllSellers}
           showSectionTitle={!isListingsStandalone}
         />
       </div>

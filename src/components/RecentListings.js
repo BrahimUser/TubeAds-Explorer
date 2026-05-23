@@ -1,9 +1,13 @@
 /**
- * Marketplace listings grid — read-only browsing of `annonces` with client
- * search filtering. Wired to Firebase via `listenAds`; video playback is
- * delegated to `onPlay(ad)` → `VideoPlayerModal` in App.
+ * Marketplace listings grid — `annonces` collection, read-only.
+ *
+ * Layouts :
+ *  • Aperçu accueil  → grille 4 colonnes côté principal + sidebars empilées.
+ *  • Vue « Voir tout » (page `/listings`) → grille 4 colonnes pleine largeur,
+ *    sidebars masquées, pagination (flèches + numéros) en bas.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import { useAuth } from '../context/AuthContext';
 import { useSellerProfiles } from '../hooks/useSellerProfiles';
@@ -18,6 +22,13 @@ import { listenFavoriteIds } from '../services/favorites';
 import AdCard from './AdCard';
 import PopularNowSidebar from './sidebars/PopularNowSidebar';
 import TopSellersSidebar from './sidebars/TopSellersSidebar';
+import { Icon } from './Icons';
+
+const PAGE_SIZE = 12;
+
+/** Grille uniforme : 1 / 2 / 3 / 4 colonnes selon la largeur. */
+const GRID_CLASS =
+  'grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
 
 export default function RecentListings({
   searchQuery = '',
@@ -25,22 +36,26 @@ export default function RecentListings({
   cityFilter = null,
   onRequireLogin,
   onPlay,
+  onOpenListing,
   onEdit,
   onVisitShop,
   previewLimit = null,
   onViewAll,
+  onViewAllSellers,
   showSectionTitle = true,
 }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [ads, setAds] = useState([]);
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState(null);
   const [favIds, setFavIds] = useState(() => new Set());
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     setStatus('loading');
     const off = listenAds(
-      { max: 72 },
+      { max: 120 },
       (items) => {
         setAds(items);
         setStatus('ready');
@@ -66,7 +81,10 @@ export default function RecentListings({
 
   const publishedAds = useMemo(() => ads.filter(adIsVisibleOnPublicHome), [ads]);
 
-  const ownerUidList = useMemo(() => publishedAds.map((a) => a.ownerUid), [publishedAds]);
+  const ownerUidList = useMemo(
+    () => publishedAds.map((a) => a.ownerUid),
+    [publishedAds],
+  );
   const sellerProfiles = useSellerProfiles(ownerUidList);
 
   const filtered = useMemo(() => {
@@ -85,197 +103,268 @@ export default function RecentListings({
     );
   }, [publishedAds, searchQuery, category, cityFilter]);
 
-  const cappedList = useMemo(() => {
-    const limit =
-      typeof previewLimit === 'number' && previewLimit > 0 ? previewLimit : null;
-    const maxAll = 60;
-    if (limit) return filtered.slice(0, limit);
-    return filtered.slice(0, maxAll);
-  }, [filtered, previewLimit]);
-
   const isHomePreview =
     typeof previewLimit === 'number' && previewLimit > 0;
 
-  const hasMoreThanPreview =
-    typeof previewLimit === 'number' && previewLimit > 0 && filtered.length > previewLimit;
+  // Reset to page 1 whenever filters change (full-grid view only).
+  useEffect(() => {
+    if (!isHomePreview) setPage(1);
+  }, [searchQuery, category, cityFilter, isHomePreview]);
 
-  const showVoirTout = isHomePreview && onViewAll;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
 
-  /** Accueil : 3 annonces sur une ligne + sidebar widgets à droite (empilés). */
-  const singleRowHome =
-    typeof previewLimit === 'number' && previewLimit > 0 && previewLimit <= 3;
+  const visibleAds = useMemo(() => {
+    if (isHomePreview) return filtered.slice(0, previewLimit);
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, isHomePreview, previewLimit, safePage]);
 
-  const gridClass =
-    'grid gap-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+  const renderHeader = () => {
+    if (!showSectionTitle) return null;
+    return (
+      <header className="mb-5 flex flex-wrap items-center justify-between gap-3 lg:mb-6">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-[1.75rem]">
+            {t('listings.sectionTitle')}
+          </h2>
+          {!isHomePreview && status === 'ready' && filtered.length > 0 && (
+            <p className="mt-1 text-sm text-slate-500 tabular-nums">
+              {filtered.length === 1
+                ? t('listings.countOne', { count: filtered.length })
+                : t('listings.countMany', { count: filtered.length })}
+              {totalPages > 1 ? ` · ${t('listings.pageOf', { current: safePage, total: totalPages })}` : ''}
+            </p>
+          )}
+        </div>
+        {isHomePreview && onViewAll && (
+          <button
+            type="button"
+            onClick={() => onViewAll()}
+            className="shrink-0 inline-flex items-center gap-1 text-sm font-bold text-brand-600 transition hover:text-brand-700"
+          >
+            {t('listings.viewAll')}
+            <Icon name="chevronDown" className="h-4 w-4 -rotate-90 rtl:rotate-90" />
+          </button>
+        )}
+      </header>
+    );
+  };
 
-  const homeAdsRowClass =
-    'flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-flow-row lg:grid-cols-3 lg:gap-3 lg:overflow-visible lg:snap-none';
+  const renderError = () => (
+    <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+      {t('listings.loadError')}{' '}
+      <code className="font-mono text-xs">{ANNONCES_COLLECTION}</code>.{' '}
+      {error?.message || ''}
+    </div>
+  );
+
+  const renderEmpty = () => (
+    <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center text-slate-600">
+      {searchQuery.trim()
+        ? t('listings.emptyForQuery')
+        : category
+          ? t('listings.emptyForCategory')
+          : ads.length === 0
+            ? t('listings.emptyNoneLoaded')
+            : t('listings.emptyNonePublished')}
+    </div>
+  );
+
+  const renderGrid = () => (
+    <div className={GRID_CLASS}>
+      {visibleAds.map((ad) => (
+        <AdCard
+          key={ad.id}
+          ad={ad}
+          isFavorite={favIds.has(ad.id)}
+          onRequireLogin={onRequireLogin}
+          onPlay={onPlay}
+          onOpenDetail={onOpenListing ? (a) => onOpenListing(a.id) : undefined}
+          onEdit={onEdit}
+          sellerProfile={sellerProfiles[ad.ownerUid]}
+          onVisitShop={onVisitShop}
+          density="default"
+        />
+      ))}
+    </div>
+  );
 
   const shellPad =
     `${SITE_MAX_WIDTH_CLASS} ${SITE_GUTTER_CLASS} mx-auto ` +
-    (showSectionTitle ? 'py-14 lg:py-16' : 'pb-14 pt-2 lg:pb-16 lg:pt-4');
+    (showSectionTitle ? 'py-12 lg:py-14' : 'pb-12 pt-2 lg:pb-14 lg:pt-4');
 
+  // ---------------------------------------------------------------------
+  // Aperçu accueil : ads (4 colonnes) à gauche + sidebars empilées à droite
+  // ---------------------------------------------------------------------
+  if (isHomePreview) {
+    return (
+      <section id="recent-listings" className={shellPad}>
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+          <div className="min-w-0 lg:col-span-9">
+            {renderHeader()}
+            {status === 'loading' && <SkeletonGrid count={previewLimit} />}
+            {status === 'error' && renderError()}
+            {status === 'ready' && filtered.length === 0 && renderEmpty()}
+            {status === 'ready' && filtered.length > 0 && renderGrid()}
+          </div>
+          <aside className="flex min-w-0 flex-col gap-6 lg:col-span-3">
+            <PopularNowSidebar
+              ads={publishedAds}
+              onPlay={onPlay}
+              onViewAll={onViewAll}
+            />
+            <TopSellersSidebar
+              ads={publishedAds}
+              sellerProfiles={sellerProfiles}
+              onVisitShop={onVisitShop}
+              onViewAll={onViewAllSellers}
+            />
+          </aside>
+        </div>
+      </section>
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Vue « Voir tout » : pleine largeur + pagination, pas de sidebar
+  // ---------------------------------------------------------------------
   return (
     <section id="recent-listings" className={shellPad}>
-      {showSectionTitle && (
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-4 lg:mb-8">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-[1.75rem]">
-              Annonces récentes
-            </h2>
-            <p className="mt-2 text-sm text-slate-500 tabular-nums">
-              {status === 'ready' && !isHomePreview && (
-                <>
-                  {cappedList.length} annonce{cappedList.length !== 1 ? 's' : ''} affichée
-                  {cappedList.length !== 1 ? 's' : ''}
-                  {hasMoreThanPreview ? ` sur ${filtered.length}` : null}
-                </>
-              )}
-            </p>
-          </div>
-          {showVoirTout && (
-            <button
-              type="button"
-              onClick={() => onViewAll()}
-              className="shrink-0 text-sm font-semibold text-brand-600 transition hover:text-brand-700"
-            >
-              Voir tout
-            </button>
-          )}
-        </header>
-      )}
-
-      {status === 'loading' && <SkeletonGrid compactHome={singleRowHome} />}
-
-      {status === 'error' && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-          Could not load listings. Confirm Firestore rules allow read on{' '}
-          <code className="font-mono text-xs">{ANNONCES_COLLECTION}</code>.{' '}
-          {error?.message || ''}
-        </div>
-      )}
-
-      {status === 'ready' && filtered.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center text-slate-600">
-          {searchQuery.trim()
-            ? 'Aucune annonce ne correspond à votre recherche.'
-            : category
-              ? 'Aucune annonce dans cette catégorie.'
-              : ads.length === 0
-                ? 'Aucune annonce chargée depuis Firestore.'
-                : 'Aucune annonce publiée pour le moment. Les annonces en attente doivent être approuvées dans l’admin.'}
-        </div>
-      )}
-
+      {renderHeader()}
+      {status === 'loading' && <SkeletonGrid count={PAGE_SIZE} />}
+      {status === 'error' && renderError()}
+      {status === 'ready' && filtered.length === 0 && renderEmpty()}
       {status === 'ready' && filtered.length > 0 && (
-        <div
-          className={
-            singleRowHome
-              ? 'grid grid-cols-1 items-start gap-8 lg:grid-cols-12 lg:gap-6'
-              : 'grid grid-cols-1 items-start gap-8 lg:grid-cols-12'
-          }
-        >
-          <div className={singleRowHome ? 'min-w-0 lg:col-span-8' : 'min-w-0 lg:col-span-8'}>
-            <div className={singleRowHome ? homeAdsRowClass : gridClass}>
-              {cappedList.map((ad) => (
-                <div
-                  key={ad.id}
-                  className={
-                    singleRowHome
-                      ? 'min-w-[min(82vw,272px)] shrink-0 snap-start lg:min-w-0 lg:shrink'
-                      : undefined
-                  }
-                >
-                  <AdCard
-                    ad={ad}
-                    isFavorite={favIds.has(ad.id)}
-                    onRequireLogin={onRequireLogin}
-                    onPlay={onPlay}
-                    onEdit={onEdit}
-                    sellerProfile={sellerProfiles[ad.ownerUid]}
-                    onVisitShop={onVisitShop}
-                    density={singleRowHome ? 'compact' : 'default'}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-          {singleRowHome ? (
-            <div className="flex min-w-0 flex-col gap-6 lg:col-span-4">
-              <PopularNowSidebar ads={publishedAds} onPlay={onPlay} onViewAll={onViewAll} />
-              <TopSellersSidebar
-                ads={publishedAds}
-                sellerProfiles={sellerProfiles}
-                onVisitShop={onVisitShop}
-                onViewAll={onViewAll}
-              />
-            </div>
-          ) : (
-            <div className="flex min-w-0 flex-col gap-6 lg:col-span-4">
-              <PopularNowSidebar ads={publishedAds} onPlay={onPlay} onViewAll={onViewAll} />
-              <TopSellersSidebar
-                ads={publishedAds}
-                sellerProfiles={sellerProfiles}
-                onVisitShop={onVisitShop}
-                onViewAll={onViewAll}
-              />
-            </div>
-          )}
-        </div>
+        <>
+          {renderGrid()}
+          <Pagination
+            page={safePage}
+            pageCount={totalPages}
+            onChange={(p) => {
+              setPage(p);
+              const grid = document.getElementById('recent-listings');
+              if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+          />
+        </>
       )}
     </section>
   );
 }
 
-function SkeletonGrid({ compactHome }) {
+// ---------------------------------------------------------------------------
+// Pagination
+// ---------------------------------------------------------------------------
+function buildPageList(current, total) {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages = new Set([1, total, current, current - 1, current + 1]);
+  if (current <= 3) {
+    pages.add(2);
+    pages.add(3);
+    pages.add(4);
+  }
+  if (current >= total - 2) {
+    pages.add(total - 1);
+    pages.add(total - 2);
+    pages.add(total - 3);
+  }
+  const sorted = Array.from(pages)
+    .filter((p) => p >= 1 && p <= total)
+    .sort((a, b) => a - b);
+  const out = [];
+  let prev = 0;
+  for (const p of sorted) {
+    if (p - prev > 1) out.push('…');
+    out.push(p);
+    prev = p;
+  }
+  return out;
+}
+
+function Pagination({ page, pageCount, onChange }) {
+  const { t } = useTranslation();
+  if (pageCount <= 1) return null;
+  const items = buildPageList(page, pageCount);
+
+  const arrowBase =
+    'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white';
+
   return (
-    <div
-      className={
-        compactHome
-          ? 'grid grid-cols-1 items-start gap-8 lg:grid-cols-12 lg:gap-6 xl:gap-8'
-          : 'grid grid-cols-1 items-start gap-8 lg:grid-cols-12'
-      }
+    <nav
+      role="navigation"
+      aria-label={t('common.paginationAria')}
+      className="mt-10 flex flex-wrap items-center justify-center gap-1.5"
     >
-      <div className={compactHome ? 'min-w-0 lg:col-span-9' : 'min-w-0 lg:col-span-8'}>
-        <div
-          className={
-            compactHome
-              ? 'flex gap-4 overflow-x-auto pb-1 lg:grid lg:grid-cols-3 lg:gap-3 lg:overflow-visible'
-              : 'grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-          }
-        >
-          {Array.from({ length: compactHome ? 3 : 8 }).map((_, i) => (
-            <div
-              key={i}
-              className={
-                compactHome
-                  ? 'min-w-[min(82vw,272px)] shrink-0 lg:min-w-0'
-                  : undefined
-              }
-            >
-              <div className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.05)]">
-                <div className="aspect-[4/3] animate-pulse bg-slate-100" />
-                <div className="space-y-2 p-4">
-                  <div className="h-5 w-1/3 animate-pulse rounded bg-slate-100" />
-                  <div className="h-4 w-[92%] animate-pulse rounded bg-slate-100" />
-                  <div className="h-3 w-1/2 animate-pulse rounded bg-slate-100" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      {compactHome ? (
-        <div className="hidden min-w-0 flex-col gap-5 lg:col-span-3 lg:flex">
-          <div className="h-72 animate-pulse rounded-xl bg-slate-100" />
-          <div className="h-72 animate-pulse rounded-xl bg-slate-100" />
-        </div>
-      ) : (
-        <div className="hidden flex-col gap-6 lg:col-span-4 lg:flex">
-          <div className="h-64 animate-pulse rounded-2xl bg-slate-100" />
-          <div className="h-56 animate-pulse rounded-2xl bg-slate-100" />
-        </div>
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page === 1}
+        aria-label={t('common.previousPage')}
+        className={arrowBase}
+      >
+        <Icon name="chevronDown" className="h-4 w-4 rotate-90 rtl:-rotate-90" />
+      </button>
+      {items.map((it, i) =>
+        it === '…' ? (
+          <span
+            key={`gap-${i}`}
+            aria-hidden
+            className="grid h-9 w-7 place-items-center text-sm text-slate-400"
+          >
+            …
+          </span>
+        ) : (
+          <button
+            key={it}
+            type="button"
+            onClick={() => onChange(it)}
+            aria-current={it === page ? 'page' : undefined}
+            className={
+              'inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-bold transition ' +
+              (it === page
+                ? 'bg-brand-500 text-white shadow-sm'
+                : 'border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50')
+            }
+          >
+            {it}
+          </button>
+        ),
       )}
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(pageCount, page + 1))}
+        disabled={page === pageCount}
+        aria-label={t('common.nextPage')}
+        className={arrowBase}
+      >
+        <Icon name="chevronDown" className="h-4 w-4 -rotate-90 rtl:rotate-90" />
+      </button>
+    </nav>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Skeleton
+// ---------------------------------------------------------------------------
+function SkeletonGrid({ count = PAGE_SIZE }) {
+  return (
+    <div className={GRID_CLASS}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.05)]"
+        >
+          <div className="aspect-[4/3] animate-pulse bg-slate-100" />
+          <div className="space-y-2 p-4">
+            <div className="h-5 w-1/3 animate-pulse rounded bg-slate-100" />
+            <div className="h-4 w-[92%] animate-pulse rounded bg-slate-100" />
+            <div className="h-3 w-1/2 animate-pulse rounded bg-slate-100" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

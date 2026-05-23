@@ -1,30 +1,70 @@
-import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Icon } from './Icons';
+import { buildMoroccoE164, mapFirebaseAuthError, registerWithPhonePassword, signInWithPhonePassword } from '../services/phonePasswordAuth';
 
-export default function LoginModal({ open, onClose }) {
-  const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
-  const [email, setEmail] = useState('');
+/**
+ * Phone + password (no SMS). Session = Firebase Auth persistence (localStorage / IndexedDB).
+ *
+ * @param {object} props
+ * @param {boolean} props.open
+ * @param {'signin' | 'signup'} [props.authIntent]
+ * @param {() => void} props.onClose
+ * @param {() => void} [props.onSignedIn]
+ */
+export default function LoginModal({ open, authIntent = 'signin', onClose, onSignedIn }) {
+  const { t } = useTranslation();
+  const isSignUp = authIntent === 'signup';
+  const [localPhone, setLocalPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!open) {
+      setLocalPhone('');
+      setPassword('');
+      setConfirmPassword('');
+      setShowPassword(false);
+      setShowConfirm(false);
+      setError(null);
+      setBusy(false);
+    }
+  }, [open, authIntent]);
 
   if (!open) return null;
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setBusy(true);
     setError(null);
+
+    if (!buildMoroccoE164(localPhone)) {
+      setError(t('authModal.errors.invalidPhone'));
+      return;
+    }
+    if (!password || password.length < 6) {
+      setError(t('authModal.errors.passwordTooShort'));
+      return;
+    }
+    if (isSignUp && password !== confirmPassword) {
+      setError(t('authModal.errors.passwordMismatch'));
+      return;
+    }
+
+    setBusy(true);
     try {
-      if (mode === 'signin') {
-        await signIn(email, password);
+      if (isSignUp) {
+        await registerWithPhonePassword(localPhone, password);
       } else {
-        await signUp(email, password);
+        await signInWithPhonePassword(localPhone, password);
       }
       onClose();
+      onSignedIn?.();
     } catch (err) {
-      setError(err?.message || 'Authentication failed.');
+      setError(err?.code ? mapFirebaseAuthError(err) : err?.message || t('authModal.errors.generic'));
     } finally {
       setBusy(false);
     }
@@ -34,65 +74,121 @@ export default function LoginModal({ open, onClose }) {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[110] grid place-items-center bg-slate-900/40 backdrop-blur-sm p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      aria-labelledby="login-modal-title"
+      className="fixed inset-0 z-[110] grid place-items-center bg-slate-900/45 backdrop-blur-sm p-4 sm:p-6"
+      onClick={(e) => e.target === e.currentTarget && !busy && onClose()}
     >
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 sm:p-7">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">
-              {mode === 'signin' ? 'Welcome back' : 'Create your account'}
-            </h2>
-            <p className="text-sm text-slate-500 mt-0.5">
-              {mode === 'signin'
-                ? 'Sign in with the same account as the mobile app. This site is browse-only — listing happens in the app.'
-                : 'Use one account on web and mobile — favorites and messages stay in sync.'}
-            </p>
+      <div className="w-full max-w-[420px] overflow-hidden rounded-3xl border border-orange-100/90 bg-white shadow-2xl ring-1 ring-orange-50">
+        <div className="border-b border-orange-50 bg-gradient-to-br from-white to-orange-50/40 px-6 pb-5 pt-6 sm:px-8 sm:pt-8">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-brand-600">
+                {isSignUp ? t('authModal.badgeSignUp') : t('authModal.badgeSignIn')}
+              </p>
+              <h2
+                id="login-modal-title"
+                className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-[1.65rem]"
+              >
+                {isSignUp ? t('authModal.titleSignUp') : t('authModal.titleSignIn')}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{t('authModal.subtitle')}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => !busy && onClose()}
+              aria-label={t('authModal.closeAria')}
+              className="shrink-0 rounded-full p-2 text-slate-500 transition hover:bg-white hover:text-slate-900 hover:shadow-sm"
+            >
+              <Icon name="close" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="p-2 -m-2 text-slate-500 hover:text-slate-800"
-          >
-            <Icon name="close" />
-          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-3">
-          <label className="block">
-            <span className="block text-sm font-medium text-slate-700 mb-1">
-              Email
-            </span>
-            <input
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[15px] outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-200"
-              placeholder="you@example.com"
-            />
-          </label>
+        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6 sm:px-8 sm:pb-8">
+          <div className="space-y-2">
+            <label htmlFor="auth-phone" className="block text-sm font-semibold text-slate-800">
+              {t('authModal.phoneLabel')}
+            </label>
+            <div className="flex overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-sm transition focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-100">
+              <span className="flex shrink-0 items-center border-e-2 border-slate-100 bg-orange-50/80 px-4 py-4 text-lg font-bold text-brand-600">
+                +212
+              </span>
+              <input
+                id="auth-phone"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                value={localPhone}
+                onChange={(e) => setLocalPhone(e.target.value)}
+                disabled={busy}
+                className="min-w-0 flex-1 bg-white px-4 py-4 text-lg font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                placeholder="6XX XXX XXX"
+              />
+            </div>
+            <p className="text-xs text-slate-500">{t('authModal.phoneHint')}</p>
+          </div>
 
-          <label className="block">
-            <span className="block text-sm font-medium text-slate-700 mb-1">
-              Password
-            </span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="auth-password" className="text-sm font-semibold text-slate-800">
+                {t('authModal.passwordLabel')}
+              </label>
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowPassword((v) => !v)}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800"
+              >
+                <Icon name="eye" className="h-3.5 w-3.5" />
+                {showPassword ? t('authModal.hidePassword') : t('authModal.showPassword')}
+              </button>
+            </div>
             <input
-              type="password"
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              required
-              minLength={6}
+              id="auth-password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete={isSignUp ? 'new-password' : 'current-password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[15px] outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-200"
-              placeholder="At least 6 characters"
+              disabled={busy}
+              className="w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-3.5 text-[15px] font-medium text-slate-900 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+              placeholder={t('authModal.passwordPlaceholder')}
             />
-          </label>
+          </div>
+
+          {isSignUp && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="auth-confirm" className="text-sm font-semibold text-slate-800">
+                  {t('authModal.confirmPasswordLabel')}
+                </label>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setShowConfirm((v) => !v)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800"
+                >
+                  <Icon name="eye" className="h-3.5 w-3.5" />
+                  {showConfirm ? t('authModal.hidePassword') : t('authModal.showPassword')}
+                </button>
+              </div>
+              <input
+                id="auth-confirm"
+                type={showConfirm ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={busy}
+                className="w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-3.5 text-[15px] font-medium text-slate-900 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+                placeholder={t('authModal.confirmPasswordPlaceholder')}
+              />
+            </div>
+          )}
 
           {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+            <div
+              role="alert"
+              className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+            >
               {error}
             </div>
           )}
@@ -100,41 +196,19 @@ export default function LoginModal({ open, onClose }) {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold py-2.5 text-sm disabled:opacity-60 transition"
+            className="flex w-full min-h-[52px] items-center justify-center rounded-2xl bg-brand-500 text-base font-bold text-white shadow-md transition hover:bg-brand-600 active:scale-[0.99] disabled:opacity-60"
           >
             {busy
-              ? 'Please wait…'
-              : mode === 'signin'
-                ? 'Sign in'
-                : 'Create account'}
+              ? isSignUp
+                ? t('authModal.busySigningUp')
+                : t('authModal.busySigningIn')
+              : isSignUp
+                ? t('authModal.submitSignUp')
+                : t('authModal.submitSignIn')}
           </button>
-        </form>
 
-        <div className="mt-4 text-center text-sm text-slate-600">
-          {mode === 'signin' ? (
-            <>
-              New here?{' '}
-              <button
-                type="button"
-                onClick={() => setMode('signup')}
-                className="font-semibold text-brand-600 hover:text-brand-700"
-              >
-                Create an account
-              </button>
-            </>
-          ) : (
-            <>
-              Already have an account?{' '}
-              <button
-                type="button"
-                onClick={() => setMode('signin')}
-                className="font-semibold text-brand-600 hover:text-brand-700"
-              >
-                Sign in
-              </button>
-            </>
-          )}
-        </div>
+          <p className="text-center text-[11px] leading-relaxed text-slate-500">{t('authModal.sessionHint')}</p>
+        </form>
       </div>
     </div>
   );

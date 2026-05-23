@@ -3,19 +3,7 @@
  */
 import { useMemo } from 'react';
 import { Icon } from '../Icons';
-
-function hashUid(uid) {
-  let h = 0;
-  for (let i = 0; i < uid.length; i++) h = (h * 31 + uid.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-function ratingMeta(uid) {
-  const h = hashUid(uid || 'x');
-  const rating = (4.2 + (h % 8) / 10).toFixed(1);
-  const reviews = 8 + (h % 52);
-  return { rating, reviews };
-}
+import { ratingMeta } from '../../utils/sellerRating';
 
 function VerifiedBadge() {
   return (

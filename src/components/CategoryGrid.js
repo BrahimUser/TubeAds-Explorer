@@ -2,104 +2,56 @@
  * Category strip — 9 rounded tiles + overflow (“Plus”) per marketplace reference.
  */
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import { Icon } from './Icons';
 
-const ROW = [
-  {
-    id: null,
-    label: 'Toutes',
-    icon: 'grid',
-    squareClass: 'bg-orange-50 text-orange-600 ring-1 ring-orange-100/90',
-    isAll: true,
-  },
-  {
-    id: 'vehicles',
-    label: 'Véhicules',
-    icon: 'car',
-    squareClass: 'bg-sky-50 text-sky-600 ring-1 ring-sky-100/80',
-  },
-  {
-    id: 'real-estate',
-    label: 'Immobilier',
-    icon: 'home',
-    squareClass: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100/80',
-  },
-  {
-    id: 'electronics',
-    label: 'Électronique',
-    icon: 'smartphone',
-    squareClass: 'bg-violet-50 text-violet-600 ring-1 ring-violet-100/80',
-  },
-  {
-    id: 'home',
-    label: 'Maison & Jardin',
-    icon: 'sofa',
-    squareClass: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100/80',
-  },
-  {
-    id: 'fashion',
-    label: 'Mode',
-    icon: 'tshirt',
-    squareClass: 'bg-pink-50 text-pink-600 ring-1 ring-pink-100/80',
-  },
-  {
-    id: 'kids-baby',
-    label: 'Enfants',
-    icon: 'baby',
-    squareClass: 'bg-sky-100 text-sky-700 ring-1 ring-sky-100/80',
-  },
-  {
-    id: 'other',
-    label: 'Loisirs & Sport',
-    icon: 'soccer',
-    squareClass: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80',
-  },
+const ROW_DEFS = [
+  { id: null, tKey: 'categories.all', icon: 'grid', squareClass: 'bg-orange-50 text-orange-600 ring-1 ring-orange-100/90', isAll: true },
+  { id: 'vehicles', tKey: 'categories.vehicles', icon: 'car', squareClass: 'bg-sky-50 text-sky-600 ring-1 ring-sky-100/80' },
+  { id: 'real-estate', tKey: 'categories.realEstate', icon: 'home', squareClass: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100/80' },
+  { id: 'electronics', tKey: 'categories.electronics', icon: 'smartphone', squareClass: 'bg-violet-50 text-violet-600 ring-1 ring-violet-100/80' },
+  { id: 'home', tKey: 'categories.homeGarden', icon: 'sofa', squareClass: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100/80' },
+  { id: 'fashion', tKey: 'categories.fashion', icon: 'tshirt', squareClass: 'bg-pink-50 text-pink-600 ring-1 ring-pink-100/80' },
+  { id: 'kids-baby', tKey: 'categories.kidsBaby', icon: 'baby', squareClass: 'bg-sky-100 text-sky-700 ring-1 ring-sky-100/80' },
+  { id: 'other', tKey: 'categories.leisureSport', icon: 'soccer', squareClass: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80' },
 ];
 
-const MORE = [
-  { id: 'services', label: 'Services', icon: 'wrench', squareClass: 'bg-teal-50 text-teal-600' },
-  { id: 'jobs', label: 'Emploi', icon: 'briefcase', squareClass: 'bg-indigo-50 text-indigo-600' },
-  { id: 'rugs', label: 'Tapis', icon: 'rug', squareClass: 'bg-rose-50 text-rose-600' },
+const MORE_DEFS = [
+  { id: 'services', tKey: 'categories.services', icon: 'wrench', squareClass: 'bg-teal-50 text-teal-600' },
+  { id: 'jobs', tKey: 'categories.jobs', icon: 'briefcase', squareClass: 'bg-indigo-50 text-indigo-600' },
+  { id: 'rugs', tKey: 'categories.rugs', icon: 'rug', squareClass: 'bg-rose-50 text-rose-600' },
 ];
 
 export default function CategoryGrid({ selected, onSelect }) {
+  const { t } = useTranslation();
   return (
     <section
       id="category-section"
       className={`mx-auto ${SITE_MAX_WIDTH_CLASS} py-10 ${SITE_GUTTER_CLASS}`}
     >
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-6">
+      <div className="mb-8 border-b border-slate-100 pb-6">
         <h2 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
-          Parcourir par catégorie
+          {t('categories.title')}
         </h2>
-        <button
-          type="button"
-          className="text-sm font-semibold text-brand-600 transition hover:text-brand-700"
-          onClick={() => {
-            document.getElementById('category-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}
-        >
-          Voir toutes les catégories
-        </button>
       </div>
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 lg:gap-4">
-        {ROW.map((t) => {
-          const selectedHere = t.isAll ? !selected : selected === t.id;
+        {ROW_DEFS.map((tile) => {
+          const selectedHere = tile.isAll ? !selected : selected === tile.id;
           return (
             <CatTile
-              key={String(t.id ?? 'all')}
-              label={t.label}
-              icon={t.icon}
-              squareClass={t.squareClass}
+              key={String(tile.id ?? 'all')}
+              label={t(tile.tKey)}
+              icon={tile.icon}
+              squareClass={tile.squareClass}
               selected={selectedHere}
-              isAll={t.isAll}
-              onClick={() => onSelect?.(t.id)}
+              isAll={tile.isAll}
+              onClick={() => onSelect?.(tile.id)}
             />
           );
         })}
-        <MorePopover selected={selected} onSelect={onSelect} extras={MORE} />
+        <MorePopover selected={selected} onSelect={onSelect} extras={MORE_DEFS} />
       </div>
     </section>
   );
@@ -142,6 +94,7 @@ function CatTile({ label, icon, squareClass, selected, isAll, onClick }) {
 }
 
 function MorePopover({ selected, onSelect, extras }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -183,32 +136,32 @@ function MorePopover({ selected, onSelect, extras }) {
             (openFromSelection ? 'text-brand-600' : 'font-medium text-slate-700')
           }
         >
-          Plus
+          {t('categories.more')}
         </span>
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-2 w-max min-w-[12rem] max-w-[16rem] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-          {extras.map((t) => {
-            const on = selected === t.id;
+        <div className="absolute end-0 top-full z-30 mt-2 w-max min-w-[12rem] max-w-[16rem] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+          {extras.map((extra) => {
+            const on = selected === extra.id;
             return (
               <button
-                key={t.id}
+                key={extra.id}
                 type="button"
                 className={
-                  'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-slate-50 ' +
+                  'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start text-sm hover:bg-slate-50 ' +
                   (on ? 'bg-brand-50 font-semibold text-brand-700' : 'text-slate-700')
                 }
                 onClick={() => {
-                  onSelect?.(t.id);
+                  onSelect?.(extra.id);
                   setOpen(false);
                 }}
               >
                 <span
-                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${t.squareClass} ring-1 ring-black/5`}
+                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${extra.squareClass} ring-1 ring-black/5`}
                 >
-                  <Icon name={t.icon} className="h-[18px] w-[18px]" />
+                  <Icon name={extra.icon} className="h-[18px] w-[18px]" />
                 </span>
-                {t.label}
+                {t(extra.tKey)}
               </button>
             );
           })}
