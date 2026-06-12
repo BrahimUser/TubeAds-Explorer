@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icons';
+import { useAuth } from '../context/AuthContext';
 import { buildMoroccoE164, mapFirebaseAuthError, registerWithPhonePassword, signInWithPhonePassword } from '../services/phonePasswordAuth';
 
 /**
- * Phone + password (no SMS). Session = Firebase Auth persistence (localStorage / IndexedDB).
+ * Phone + password (no SMS). Session = JWT tokens in localStorage.
  *
  * @param {object} props
  * @param {boolean} props.open
@@ -14,6 +15,7 @@ import { buildMoroccoE164, mapFirebaseAuthError, registerWithPhonePassword, sign
  */
 export default function LoginModal({ open, authIntent = 'signin', onClose, onSignedIn }) {
   const { t } = useTranslation();
+  const { refreshSession } = useAuth();
   const isSignUp = authIntent === 'signup';
   const [localPhone, setLocalPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -61,6 +63,7 @@ export default function LoginModal({ open, authIntent = 'signin', onClose, onSig
       } else {
         await signInWithPhonePassword(localPhone, password);
       }
+      await refreshSession?.();
       onClose();
       onSignedIn?.();
     } catch (err) {

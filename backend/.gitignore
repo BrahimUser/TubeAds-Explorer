@@ -1,0 +1,5 @@
+node_modules/
+.env
+src/uploads/*
+!src/uploads/.gitkeep
+prisma/migrations/**/migration_lock.toml

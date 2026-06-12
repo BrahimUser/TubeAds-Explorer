@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-import { USERS_COLLECTION, normalizeUserProfile } from '../services/users';
+import { fetchUser, normalizeUserProfile } from '../services/users';
 
 /**
  * One-off fetch of seller profiles for cards (not real-time per profile).
- * Uids list should be stable-ish (deduped) to avoid extra reads.
  */
 export function useSellerProfiles(memberUids) {
   const [profiles, setProfiles] = useState(() => ({}));
@@ -22,9 +19,8 @@ export function useSellerProfiles(memberUids) {
       const entries = await Promise.all(
         uids.map(async (uid) => {
           try {
-            const snap = await getDoc(doc(db, USERS_COLLECTION, uid));
-            if (!snap.exists()) return [uid, normalizeUserProfile(uid, null)];
-            return [uid, normalizeUserProfile(uid, snap.data())];
+            const profile = await fetchUser(uid);
+            return [uid, profile];
           } catch {
             return [uid, normalizeUserProfile(uid, null)];
           }

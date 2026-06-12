@@ -1,10 +1,8 @@
 /**
- * User profiles in Firestore `users/{uid}` — shared with mobile.
- * Compte Pro: `isPro: boolean`
- * Boutique: `shopName`, `shopLogoUrl`, `shopDescription`
+ * User profiles via Express API.
  */
-import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import api, { unwrap } from '../api/client';
+import { createPoller } from '../hooks/usePolling';
 
 export const USERS_COLLECTION = 'users';
 
@@ -21,7 +19,7 @@ export function normalizeUserProfile(uid, raw) {
     };
   }
   return {
-    uid,
+    uid: raw.id || raw.uid || uid,
     isPro: Boolean(raw.isPro),
     role: String(raw.role ?? '').trim().toLowerCase(),
     shopName: String(raw.shopName ?? raw.shop_name ?? raw.displayName ?? '').trim(),
@@ -33,52 +31,31 @@ export function normalizeUserProfile(uid, raw) {
   };
 }
 
-/** Default profile shape when the Firestore doc is missing or the listener errors. */
 export function makeEmptyUserProfile(uid) {
   return normalizeUserProfile(uid, null);
 }
 
-/**
- * After phone OTP sign-in: `users/{uid}` with `phoneNumber` (E.164 from Firebase Auth).
- * Creates a new profile for first-time registration; merges `phoneNumber` for returning users.
- */
 export async function ensureUserProfileFromPhoneAuth(user) {
-  if (!user?.uid) return;
-  const phoneNumber = String(user.phoneNumber || '').trim();
-  const ref = doc(db, USERS_COLLECTION, user.uid);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    await setDoc(
-      ref,
-      { phoneNumber, updatedAt: serverTimestamp() },
-      { merge: true },
-    );
-    return;
-  }
-  await setDoc(ref, {
-    phoneNumber,
-    displayName: phoneNumber || user.uid,
-    authProvider: 'phone',
-    isPro: false,
-    shopName: '',
-    shopLogoUrl: '',
-    shopDescription: '',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  // Profile is created on register; no-op for API auth.
+  return user;
 }
 
+export async function fetchUser(uid) {
+  const res = await api.get(`/users/${uid}`);
+  const { user } = unwrap(res);
+  return normalizeUserProfile(uid, user);
+}
+
+/** Polling replacement for Firestore onSnapshot on users/{uid}. */
 export function subscribeUser(uid, onChange, onError) {
   if (!uid) {
     onChange(normalizeUserProfile('', null));
     return () => {};
   }
-  return onSnapshot(
-    doc(db, USERS_COLLECTION, uid),
-    (snap) => {
-      if (!snap.exists()) onChange(normalizeUserProfile(uid, null));
-      else onChange(normalizeUserProfile(uid, snap.data()));
-    },
-    (err) => onError?.(err),
+  return createPoller(
+    () => fetchUser(uid),
+    onChange,
+    onError,
+    10000,
   );
 }

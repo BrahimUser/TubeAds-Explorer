@@ -1,8 +1,8 @@
 /**
- * Permanent super-admin (Firebase Auth UID). Full access to `/admin/dashboard` and moderation UI.
- * Override with `REACT_APP_SUPER_ADMIN_UID` in `.env` for deployment-specific UIDs.
+ * Super-admin user id (UUID from Express API seed).
+ * Override with `REACT_APP_SUPER_ADMIN_UID` after seeding.
  */
-const FALLBACK_SUPER_ADMIN_UID = 'hWbzZAQju2Ufbo8iLoaeKBqkA6J3';
+const FALLBACK_SUPER_ADMIN_UID = '';
 
 export const SUPER_ADMIN_UID =
   typeof process.env.REACT_APP_SUPER_ADMIN_UID === 'string' && process.env.REACT_APP_SUPER_ADMIN_UID.trim()
@@ -10,5 +10,6 @@ export const SUPER_ADMIN_UID =
     : FALLBACK_SUPER_ADMIN_UID;
 
 export function isSuperAdminUid(uid) {
+  if (!SUPER_ADMIN_UID) return false;
   return typeof uid === 'string' && uid.length > 0 && uid === SUPER_ADMIN_UID;
 }

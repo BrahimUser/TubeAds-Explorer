@@ -3,12 +3,10 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../firebase';
 import { getAd } from '../services/listings';
 import { categoryLabel, cityLabel } from '../services/categories';
-import { USERS_COLLECTION, normalizeUserProfile } from '../services/users';
+import { fetchUser, normalizeUserProfile } from '../services/users';
 import { getOrCreateChatThreadForAd } from '../services/chat';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import { Icon } from './Icons';
@@ -130,13 +128,9 @@ export default function ProductDetailPage({
         setStatus('ready');
         if (next.ownerUid) {
           try {
-            const snap = await getDoc(doc(db, USERS_COLLECTION, next.ownerUid));
+            const profile = await fetchUser(next.ownerUid);
             if (cancelled) return;
-            setSeller(
-              snap.exists()
-                ? normalizeUserProfile(next.ownerUid, snap.data())
-                : normalizeUserProfile(next.ownerUid, null),
-            );
+            setSeller(profile);
           } catch {
             if (!cancelled) setSeller(normalizeUserProfile(next.ownerUid, null));
           }

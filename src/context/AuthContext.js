@@ -1,12 +1,8 @@
-// Firebase Auth session (email/password mapped from phone — see phonePasswordAuth.js).
-// `isLoggedIn` mirrors `user` for navbar and gated UI.
-// `role` merges super-admin UID + Firestore `users/{uid}.role` (synced in real time).
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+// JWT session via Express API (replaces Firebase Auth).
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import api, { clearTokens, getAccessToken, getRefreshToken, unwrap } from '../api/client';
 import { isSuperAdminUid } from '../constants/superAdmin';
-import { auth, db } from '../firebase';
-import { USERS_COLLECTION, makeEmptyUserProfile, subscribeUser } from '../services/users';
+import { makeEmptyUserProfile, subscribeUser } from '../services/users';
 
 const AuthContext = createContext({
   user: null,
@@ -19,6 +15,17 @@ const AuthContext = createContext({
   signOut: async () => {},
 });
 
+function toAuthUser(profile) {
+  if (!profile) return null;
+  return {
+    uid: profile.id || profile.uid,
+    id: profile.id || profile.uid,
+    phoneNumber: profile.phoneNumber,
+    displayName: profile.displayName || profile.phoneNumber,
+    email: null,
+  };
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
@@ -26,13 +33,42 @@ export function AuthProvider({ children }) {
   const [profileReady, setProfileReady] = useState(false);
   const superAdminLogRef = useRef(null);
 
-  useEffect(() => {
-    const off = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+  const loadSession = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) {
+      setUser(null);
+      setUserProfile(null);
+      setProfileReady(true);
       setReady(true);
-    });
-    return off;
+      return;
+    }
+    try {
+      const res = await api.get('/auth/me');
+      const { user: profile } = unwrap(res);
+      setUser(toAuthUser(profile));
+      setUserProfile({
+        uid: profile.id,
+        isPro: profile.isPro,
+        role: String(profile.role || '').toLowerCase(),
+        shopName: profile.shopName || '',
+        shopLogoUrl: profile.shopLogoUrl || '',
+        shopDescription: profile.shopDescription || '',
+        phoneNumber: profile.phoneNumber || '',
+      });
+      setProfileReady(true);
+    } catch {
+      clearTokens();
+      setUser(null);
+      setUserProfile(null);
+      setProfileReady(true);
+    } finally {
+      setReady(true);
+    }
   }, []);
+
+  useEffect(() => {
+    loadSession();
+  }, [loadSession]);
 
   useEffect(() => {
     if (!user) superAdminLogRef.current = null;
@@ -67,28 +103,6 @@ export function AuthProvider({ children }) {
     console.log('Super Admin Detected: Access Granted');
   }, [user?.uid]);
 
-  /** One-shot read after login — debugging + parity with mobile immediate `get()`. */
-  useEffect(() => {
-    if (!user?.uid) return undefined;
-    let cancelled = false;
-    (async () => {
-      try {
-        const ref = doc(db, USERS_COLLECTION, user.uid);
-        const snap = await getDoc(ref);
-        const userData = snap.exists() ? snap.data() : null;
-        if (cancelled) return;
-        // eslint-disable-next-line no-console
-        console.log('Logged in UID:', user.uid, '| Role from Firestore:', userData?.role);
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.warn('[AuthContext] users/{uid} get()', e);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.uid]);
-
   const role = useMemo(() => {
     if (!user) return null;
     if (isSuperAdminUid(user.uid)) return 'admin';
@@ -103,6 +117,21 @@ export function AuthProvider({ children }) {
     return userProfile?.role === 'admin';
   }, [user, profileReady, userProfile?.role]);
 
+  const signOut = useCallback(async () => {
+    try {
+      const refreshToken = getRefreshToken();
+      if (refreshToken) {
+        await api.post('/auth/logout', { refreshToken });
+      }
+    } catch {
+      // best-effort
+    }
+    clearTokens();
+    setUser(null);
+    setUserProfile(null);
+    setProfileReady(true);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -112,9 +141,10 @@ export function AuthProvider({ children }) {
       profileReady,
       role,
       isAdmin,
-      signOut: () => fbSignOut(auth),
+      signOut,
+      refreshSession: loadSession,
     }),
-    [user, ready, userProfile, profileReady, role, isAdmin],
+    [user, ready, userProfile, profileReady, role, isAdmin, signOut, loadSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
