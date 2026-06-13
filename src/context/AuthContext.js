@@ -1,6 +1,7 @@
 // JWT session via Express API (replaces Firebase Auth).
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import api, { clearTokens, getAccessToken, getRefreshToken, unwrap } from '../api/client';
+import { disconnectSocket } from '../services/socket';
 import { isSuperAdminUid } from '../constants/superAdmin';
 import { makeEmptyUserProfile, subscribeUser } from '../services/users';
 
@@ -127,6 +128,7 @@ export function AuthProvider({ children }) {
       // best-effort
     }
     clearTokens();
+    disconnectSocket();
     setUser(null);
     setUserProfile(null);
     setProfileReady(true);

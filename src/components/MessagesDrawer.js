@@ -1,5 +1,4 @@
-// Slide-in messages panel. Reads from the same `chatThreads` collection the
-// mobile app uses, so unread conversations show up wherever the user signs in.
+// Slide-in messages panel. Thread list and messages update in real time via Socket.IO.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -117,10 +116,7 @@ export default function MessagesDrawer({
     setLoading(true);
     setError(null);
 
-    // The inbox listener is recreated every time it errors out so the UI
-    // recovers automatically once a freshly-created Firestore composite
-    // index finishes building (Firestore otherwise terminates onSnapshot
-    // after the first error).
+    // Real-time inbox: initial load via REST, then Socket.IO pushes thread updates.
     let unsubscribe = null;
     let retryTimer = null;
     let cancelled = false;
@@ -130,9 +126,7 @@ export default function MessagesDrawer({
       unsubscribe = listenChatThreads(
         user.uid,
         (list) => {
-          // Each successful snapshot wipes any previous index/permission
-          // error so the loading state disappears once the listener
-          // recovers.
+          // Each successful load clears any previous error.
           setError(null);
           setThreads(list);
           setLoading(false);
@@ -146,8 +140,7 @@ export default function MessagesDrawer({
         (err) => {
           setError(err);
           setLoading(false);
-          // Polling retry: while the index is provisioning, keep trying
-          // every 30s so the drawer self-heals when Firestore is ready.
+          // Retry after transient socket/API errors.
           if (unsubscribe) {
             unsubscribe();
             unsubscribe = null;
@@ -400,8 +393,7 @@ function ChatPane({ user, thread, profiles }) {
   useEffect(() => {
     setMessages([]);
     if (!thread) return undefined;
-    // Real-time messages: onSnapshot pushes any new message into state as
-    // soon as Firestore commits it, so the chat updates without a refresh.
+    // Real-time messages: initial load via REST, then Socket.IO pushes new messages.
     return listenThreadMessages(thread.id, setMessages, (err) =>
       console.warn('messages listener', err),
     );
@@ -429,11 +421,14 @@ function ChatPane({ user, thread, profiles }) {
     setSending(true);
     setSendError(null);
     try {
-      await sendChatMessage(thread.id, text, {
+      const sent = await sendChatMessage(thread.id, text, {
         listingId: thread.listingId || thread.adId || null,
         recipientId: otherUid,
         senderName: user?.displayName || user?.email || '',
       });
+      if (sent) {
+        setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
+      }
       setDraft('');
     } catch (err) {
       console.error('sendChatMessage', err);

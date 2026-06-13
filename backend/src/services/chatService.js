@@ -2,6 +2,7 @@ import { chatRepository } from '../repositories/chatRepository.js';
 import { listingRepository } from '../repositories/listingRepository.js';
 import { notificationRepository } from '../repositories/notificationRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
+import { emitNewMessage, emitThreadCreated } from '../socket/chatEvents.js';
 import { AuthorizationError, NotFoundError, ValidationError } from '../utils/AppError.js';
 import { mapChatThread, mapChatMessage } from '../utils/mappers.js';
 
@@ -37,6 +38,7 @@ export const chatService = {
         ],
       },
     });
+    emitThreadCreated(thread);
     return mapChatThread(thread);
   },
 
@@ -73,7 +75,7 @@ export const chatService = {
       listingId: listingId || thread.listingId,
     });
 
-    await chatRepository.update(threadId, {
+    const updatedThread = await chatRepository.update(threadId, {
       lastMessageText: trimmed || '📷 Photo',
       lastMessageAt: new Date(),
     });
@@ -91,6 +93,8 @@ export const chatService = {
       });
     }
 
-    return mapChatMessage(message);
+    const mappedMessage = mapChatMessage(message);
+    emitNewMessage(mappedMessage, updatedThread);
+    return mappedMessage;
   },
 };
