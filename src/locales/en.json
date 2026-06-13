@@ -89,6 +89,10 @@
     "googlePlay": "Get it on Google Play",
     "appStore": "Download on the App Store",
     "copyright": "© 2026 {{appName}}. All rights reserved.",
+    "pages": {
+      "backHome": "← Back to home",
+      "needHelp": "Have a question? Visit our"
+    },
     "links": {
       "about": "About us",
       "careers": "Careers",

@@ -6,6 +6,9 @@ import { createPoller } from '../hooks/usePolling';
 
 export const USERS_COLLECTION = 'users';
 
+const USER_PROFILE_CACHE_MS = 5 * 60 * 1000;
+const userProfileCache = new Map();
+
 export function normalizeUserProfile(uid, raw) {
   if (!raw || typeof raw !== 'object') {
     return {
@@ -41,9 +44,15 @@ export async function ensureUserProfileFromPhoneAuth(user) {
 }
 
 export async function fetchUser(uid) {
+  const cached = userProfileCache.get(uid);
+  if (cached && Date.now() - cached.at < USER_PROFILE_CACHE_MS) {
+    return cached.profile;
+  }
   const res = await api.get(`/users/${uid}`);
   const { user } = unwrap(res);
-  return normalizeUserProfile(uid, user);
+  const profile = normalizeUserProfile(uid, user);
+  userProfileCache.set(uid, { profile, at: Date.now() });
+  return profile;
 }
 
 /** Polling replacement for Firestore onSnapshot on users/{uid}. */

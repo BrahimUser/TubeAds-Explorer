@@ -173,7 +173,7 @@ export default function TopSellersPage({ onClose, onNavigateHome, onVisitShop })
   useEffect(() => {
     setStatus('loading');
     return listenAds(
-      { max: 200 },
+      { max: 120 },
       (items) => {
         setAds(items);
         setStatus('ready');

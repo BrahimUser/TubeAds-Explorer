@@ -89,6 +89,10 @@
     "googlePlay": "متوفر على Google Play",
     "appStore": "حمّل من App Store",
     "copyright": "© 2026 {{appName}}. جميع الحقوق محفوظة.",
+    "pages": {
+      "backHome": "← العودة إلى الرئيسية",
+      "needHelp": "لديك سؤال؟ راجع"
+    },
     "links": {
       "about": "من نحن",
       "careers": "وظائف",

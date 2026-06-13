@@ -89,6 +89,10 @@
     "googlePlay": "Télécharger sur Google Play",
     "appStore": "Télécharger sur l'App Store",
     "copyright": "© 2026 {{appName}}. Tous droits réservés.",
+    "pages": {
+      "backHome": "← Retour à l'accueil",
+      "needHelp": "Une question ? Consultez notre"
+    },
     "links": {
       "about": "Qui sommes-nous",
       "careers": "Carrières",

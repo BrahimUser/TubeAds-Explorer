@@ -19,7 +19,7 @@ export function listenChatThreads(uid, onChange, onError) {
     },
     onChange,
     onError,
-    5000,
+    15000,
   );
 }
 
@@ -36,7 +36,7 @@ export function listenThreadMessages(threadId, onChange, onError) {
     },
     onChange,
     onError,
-    3000,
+    10000,
   );
 }
 
