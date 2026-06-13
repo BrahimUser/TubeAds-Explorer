@@ -1,21 +1,18 @@
-// VideoPlayerModal — fullscreen lightbox that embeds the YouTube video for a
-// given ad. The web shows the same YouTube ID the React Native mobile app
-// stores on each `annonces` doc, so opening a card on the web plays the
-// exact video posted from the app.
+// VideoPlayerModal — fullscreen lightbox for listing videos.
+// Supports YouTube embeds (youtubeVideoId / YouTube URLs) and direct MP4 URLs (videoUrl).
 //
 // Props:
 //   open       boolean       — when true the modal is rendered + focused
-//   ad         Ad | null     — the ad to play; provides title and youtubeVideoId
+//   ad         Ad | null     — the ad to play; provides title, youtubeVideoId, videoUrl
 //   onClose    () => void    — fires on backdrop click / ESC / close button
 //
 // Implementation notes:
-//   • We only mount the <iframe> while `open` is true, so closing the
-//     modal kills the embed (and stops audio) without needing the YouTube
-//     iframe API.
-//   • `?autoplay=1&modestbranding=1&rel=0` mirrors the parameters the
-//     mobile player uses.
+//   • We only mount the player while `open` is true, so closing the modal stops playback.
+//   • YouTube uses `?autoplay=1&modestbranding=1&rel=0` like the mobile player.
+//   • Direct file URLs use a native <video> element with controls.
 //   • A keyboard listener on the document closes the modal on ESC.
 import { useEffect } from 'react';
+import { resolveAdVideoPlayback } from '../services/listings';
 import { Icon } from './Icons';
 
 const CURRENCY_SUFFIX = { MAD: 'MAD', EUR: '€', USD: '$' };
@@ -46,10 +43,11 @@ export default function VideoPlayerModal({ open, ad, onClose }) {
 
   if (!open || !ad) return null;
 
-  const videoId = ad.youtubeVideoId;
-  const embedUrl = videoId
-    ? `https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0&playsinline=1`
-    : null;
+  const playback = resolveAdVideoPlayback(ad);
+  const youtubeEmbedUrl =
+    playback.kind === 'youtube'
+      ? `https://www.youtube.com/embed/${playback.youtubeVideoId}?autoplay=1&modestbranding=1&rel=0&playsinline=1`
+      : null;
 
   return (
     <div
@@ -72,14 +70,24 @@ export default function VideoPlayerModal({ open, ad, onClose }) {
         </button>
 
         <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl">
-          {embedUrl ? (
+          {youtubeEmbedUrl ? (
             <iframe
-              key={videoId}
-              src={embedUrl}
+              key={playback.youtubeVideoId}
+              src={youtubeEmbedUrl}
               title={ad.title || 'Ad video'}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
               allowFullScreen
               className="absolute inset-0 w-full h-full"
+            />
+          ) : playback.kind === 'direct' ? (
+            <video
+              key={playback.videoUrl}
+              src={playback.videoUrl}
+              poster={ad.thumbnailUrl || undefined}
+              controls
+              autoPlay
+              playsInline
+              className="absolute inset-0 h-full w-full bg-black object-contain"
             />
           ) : (
             <div className="absolute inset-0 grid place-items-center text-white/70 text-sm">

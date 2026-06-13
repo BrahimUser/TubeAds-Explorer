@@ -37,6 +37,26 @@ function extractYoutubeVideoId(candidate) {
   return watch?.[1] || '';
 }
 
+/** Resolve how to play a listing video: YouTube embed or direct file URL. */
+export function resolveAdVideoPlayback(ad) {
+  if (!ad) return { kind: 'none' };
+
+  const youtubeVideoId =
+    (typeof ad.youtubeVideoId === 'string' && extractYoutubeVideoId(ad.youtubeVideoId)) ||
+    extractYoutubeVideoId(ad.videoUrl || '');
+
+  if (youtubeVideoId) {
+    return { kind: 'youtube', youtubeVideoId };
+  }
+
+  const videoUrl = typeof ad.videoUrl === 'string' ? ad.videoUrl.trim() : '';
+  if (videoUrl) {
+    return { kind: 'direct', videoUrl };
+  }
+
+  return { kind: 'none' };
+}
+
 function coercePriceCents(raw) {
   if (typeof raw.priceCents === 'number' && Number.isFinite(raw.priceCents)) {
     return Math.round(raw.priceCents);

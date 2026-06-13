@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import useIsAdmin from '../hooks/useIsAdmin';
 import { approveListing, listenPendingAds, rejectListing } from '../services/listings';
 import { pushPath } from '../utils/routing';
+import AdminModerationCard from './AdminModerationCard';
+import VideoPlayerModal from './VideoPlayerModal';
 
 function badge(text, tone) {
   const cls =
@@ -20,6 +22,7 @@ export default function AdminDashboard({ onRequireLogin, onNavigateHome }) {
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(() => new Map());
   const [error, setError] = useState(null);
+  const [videoAd, setVideoAd] = useState(null);
 
   useEffect(() => {
     if (!user || !ready || !isAdmin) {
@@ -108,61 +111,40 @@ export default function AdminDashboard({ onRequireLogin, onNavigateHome }) {
         </div>
       )}
 
-      <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-slate-500">
+      <div className="mt-8 space-y-4">
+        <div className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
           {t('adminModeration.pendingCount', { count: items.length })}
         </div>
-        <div className="divide-y divide-slate-200">
-          {items.length === 0 ? (
-            <div className="px-5 py-10 text-center text-sm text-slate-600">
-              {t('adminModeration.emptyQueue')}
-              <div className="mt-2 text-xs text-slate-500">{t('adminModeration.emptyHint')}</div>
-            </div>
-          ) : (
-            items.map((ad) => {
+
+        {items.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-10 text-center text-sm text-slate-600 shadow-sm">
+            {t('adminModeration.emptyQueue')}
+            <div className="mt-2 text-xs text-slate-500">{t('adminModeration.emptyHint')}</div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {items.map((ad) => {
               const busyApprove = busy.has(`${ad.id}:approve`);
               const busyReject = busy.has(`${ad.id}:reject`);
               const locked = busyApprove || busyReject;
               return (
-                <div
+                <AdminModerationCard
                   key={ad.id}
-                  className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-start sm:justify-between"
-                >
-                  <div className="min-w-0 space-y-1">
-                    <div className="text-sm font-extrabold text-slate-900">{ad.title || t('common.untitled')}</div>
-                    <div className="text-xs text-slate-500">
-                      <span className="font-mono text-[11px] text-slate-700">{ad.id}</span>
-                      {' · '}
-                      <span className="font-mono text-[11px]">
-                        {t('adminModeration.owner')} {ad.ownerUid || '—'}
-                      </span>
-                    </div>
-                    <div className="break-all text-[11px] text-slate-500">{ad.videoUrl || '—'}</div>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    <button
-                      type="button"
-                      disabled={locked}
-                      className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-extrabold text-white hover:bg-slate-800 disabled:opacity-60"
-                      onClick={() => runAction(ad.id, 'approve')}
-                    >
-                      {busyApprove ? t('adminModeration.approving') : t('adminModeration.approve')}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={locked}
-                      className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-extrabold text-red-700 hover:bg-red-50 disabled:opacity-60"
-                      onClick={() => runAction(ad.id, 'reject')}
-                    >
-                      {busyReject ? t('adminModeration.rejecting') : t('adminModeration.reject')}
-                    </button>
-                  </div>
-                </div>
+                  ad={ad}
+                  busyApprove={busyApprove}
+                  busyReject={busyReject}
+                  locked={locked}
+                  onApprove={() => runAction(ad.id, 'approve')}
+                  onReject={() => runAction(ad.id, 'reject')}
+                  onPlayVideo={setVideoAd}
+                />
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
+
+      <VideoPlayerModal open={!!videoAd} ad={videoAd} onClose={() => setVideoAd(null)} />
     </div>
   );
 }
