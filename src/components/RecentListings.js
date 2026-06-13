@@ -79,6 +79,15 @@ export default function RecentListings({
     );
   }, [user]);
 
+  function handleFavoriteChange(adId, favorited) {
+    setFavIds((prev) => {
+      const next = new Set(prev);
+      if (favorited) next.add(adId);
+      else next.delete(adId);
+      return next;
+    });
+  }
+
   const publishedAds = useMemo(() => ads.filter(adIsVisibleOnPublicHome), [ads]);
 
   const ownerUidList = useMemo(
@@ -178,6 +187,7 @@ export default function RecentListings({
           key={ad.id}
           ad={ad}
           isFavorite={favIds.has(ad.id)}
+          onFavoriteChange={handleFavoriteChange}
           onRequireLogin={onRequireLogin}
           onPlay={onPlay}
           onOpenDetail={onOpenListing ? (a) => onOpenListing(a.id) : undefined}

@@ -58,6 +58,15 @@ export default function ShopPage({
     return listenFavoriteIds(user.uid, setFavIds, () => {});
   }, [user]);
 
+  function handleFavoriteChange(adId, favorited) {
+    setFavIds((prev) => {
+      const next = new Set(prev);
+      if (favorited) next.add(adId);
+      else next.delete(adId);
+      return next;
+    });
+  }
+
   const displayName = useMemo(() => {
     if (seller?.shopName) return seller.shopName;
     return `Boutique · ${sellerId?.slice(0, 8)}…`;
@@ -150,6 +159,7 @@ export default function ShopPage({
                 key={ad.id}
                 ad={ad}
                 isFavorite={favIds.has(ad.id)}
+                onFavoriteChange={handleFavoriteChange}
                 onRequireLogin={onRequireLogin}
                 onPlay={onPlay}
                 onOpenDetail={onOpenListing ? (a) => onOpenListing(a.id) : undefined}

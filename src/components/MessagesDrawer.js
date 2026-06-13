@@ -188,7 +188,7 @@ export default function MessagesDrawer({
     >
       <aside
         className={
-          'absolute right-0 top-0 h-full w-full sm:w-[772px] max-w-full bg-white shadow-2xl flex flex-col ' +
+          'absolute right-0 top-0 h-full w-full sm:w-[796px] max-w-full bg-white shadow-2xl flex flex-col ' +
           'transition-transform duration-300 ease-out motion-reduce:transition-none ' +
           (visible ? 'translate-x-0' : 'translate-x-full')
         }

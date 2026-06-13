@@ -3,7 +3,7 @@
  * tap opens the modal player (read-only browsing). Heart syncs with mobile
  * favorites.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { toggleFavorite } from '../services/favorites';
@@ -118,6 +118,7 @@ function AdCardTextBlock({ ad, compact, isSellerPro, isOwner, onEdit, t, lang })
 export default function AdCard({
   ad,
   isFavorite,
+  onFavoriteChange,
   onRequireLogin,
   onPlay,
   onOpenDetail,
@@ -131,6 +132,11 @@ export default function AdCard({
   const lang = i18n.language || 'fr';
   const { user } = useAuth();
   const [heartBusy, setHeartBusy] = useState(false);
+  const [favorited, setFavorited] = useState(!!isFavorite);
+
+  useEffect(() => {
+    setFavorited(!!isFavorite);
+  }, [isFavorite]);
   const hasVideo = Boolean(ad.youtubeVideoId) || Boolean(ad.videoUrl);
   const isDirectVideo =
     typeof ad.videoUrl === 'string' &&
@@ -146,9 +152,15 @@ export default function AdCard({
       return;
     }
     if (heartBusy) return;
+    const next = !favorited;
+    setFavorited(next);
+    onFavoriteChange?.(ad.id, next);
     setHeartBusy(true);
     try {
-      await toggleFavorite(ad, !!isFavorite);
+      await toggleFavorite(ad, favorited);
+    } catch {
+      setFavorited(!next);
+      onFavoriteChange?.(ad.id, !next);
     } finally {
       setHeartBusy(false);
     }
@@ -215,15 +227,17 @@ export default function AdCard({
       <button
         type="button"
         onClick={onFavorite}
-        aria-pressed={isFavorite}
+        disabled={heartBusy}
+        aria-pressed={favorited}
         aria-label={t('card.favorite')}
+        aria-busy={heartBusy}
         className={
-          'absolute end-2.5 top-2.5 z-[2] grid place-items-center rounded-full border border-slate-200/90 bg-white text-slate-600 shadow-md transition hover:scale-105 ' +
+          'absolute end-2.5 top-2.5 z-[2] grid place-items-center rounded-full border border-slate-200/90 bg-white text-slate-600 shadow-md transition hover:scale-105 disabled:pointer-events-none disabled:opacity-60 ' +
           (compact ? 'h-9 w-9 ' : 'h-10 w-10 ') +
-          (isFavorite ? 'text-brand-500' : '')
+          (favorited ? 'text-brand-500' : '')
         }
       >
-        <Icon name={isFavorite ? 'heartFilled' : 'heart'} className={compact ? 'h-4.5 w-4.5' : 'h-5 w-5'} />
+        <Icon name={favorited ? 'heartFilled' : 'heart'} className={compact ? 'h-4.5 w-4.5' : 'h-5 w-5'} />
       </button>
 
       <div className={compact ? 'space-y-1.5 p-3' : 'space-y-2 p-4'}>
