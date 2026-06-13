@@ -49,13 +49,13 @@ export async function sendChatMessage(threadId, text, options = {}) {
   const senderName = options.senderName || '';
   if (!trimmed && !imageUrl) return;
 
-  await api.post(`/chat/threads/${threadId}/messages`, {
-    text: trimmed,
-    imageUrl,
-    listingId,
-    recipientId,
-    senderName,
-  });
+  const body = { text: trimmed };
+  if (imageUrl) body.imageUrl = imageUrl;
+  if (listingId) body.listingId = listingId;
+  if (recipientId) body.recipientId = recipientId;
+  if (senderName) body.senderName = senderName;
+
+  await api.post(`/chat/threads/${threadId}/messages`, body);
 }
 
 export async function getOrCreateChatThreadForAd(ad) {

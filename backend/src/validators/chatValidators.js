@@ -11,7 +11,7 @@ export const threadIdValidator = [
 export const sendMessageValidator = [
   param('id').isUUID(),
   body('text').optional().isString(),
-  body('imageUrl').optional().isURL(),
+  body('imageUrl').optional({ nullable: true }).isURL(),
 ];
 
 export const messagesQueryValidator = [
