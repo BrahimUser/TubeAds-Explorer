@@ -78,6 +78,8 @@ function avatarInitial(name) {
   return c ? c.toUpperCase() : '?';
 }
 
+const DRAWER_TRANSITION_MS = 300;
+
 export default function MessagesDrawer({
   open,
   onClose,
@@ -89,6 +91,21 @@ export default function MessagesDrawer({
   const [activeId, setActiveId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [mounted, setMounted] = useState(open);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      const frame = requestAnimationFrame(() => {
+        requestAnimationFrame(() => setVisible(true));
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+    setVisible(false);
+    const timer = window.setTimeout(() => setMounted(false), DRAWER_TRANSITION_MS);
+    return () => window.clearTimeout(timer);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -156,16 +173,26 @@ export default function MessagesDrawer({
     setActiveId(initialThreadId);
   }, [open, initialThreadId]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm"
+      aria-hidden={!visible}
+      className={
+        'fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ease-out motion-reduce:transition-none ' +
+        (visible ? 'opacity-100' : 'opacity-0')
+      }
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <aside className="absolute right-0 top-0 h-full w-full sm:w-[680px] max-w-full bg-white shadow-2xl flex flex-col">
+      <aside
+        className={
+          'absolute right-0 top-0 h-full w-full sm:w-[772px] max-w-full bg-white shadow-2xl flex flex-col ' +
+          'transition-transform duration-300 ease-out motion-reduce:transition-none ' +
+          (visible ? 'translate-x-0' : 'translate-x-full')
+        }
+      >
         <header className="flex items-center justify-between px-5 h-14 border-b border-slate-200">
           <h2 className="font-bold text-slate-900">Messages</h2>
           <button
