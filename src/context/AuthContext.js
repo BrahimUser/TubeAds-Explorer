@@ -80,6 +80,7 @@ export function AuthProvider({ children }) {
     }
     disconnectSocket();
     clearAuthAndCache(queryClient);
+    window.location.assign('/');
   }, [queryClient]);
 
   const refreshSession = useCallback(async () => {
