@@ -34,6 +34,7 @@ export function useToggleFavorite() {
     onSettled: (_data, _err, { uid }) => {
       if (uid) {
         queryClient.invalidateQueries({ queryKey: queryKeys.favorites.ids(uid) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.favorites.list(uid) });
       }
     },
     meta: { showGlobalLoader: false },

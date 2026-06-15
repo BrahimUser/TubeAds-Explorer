@@ -14,6 +14,7 @@ export const queryKeys = {
   favorites: {
     all: ['favorites'],
     ids: (uid) => [...queryKeys.favorites.all, 'ids', uid ?? ''],
+    list: (uid) => [...queryKeys.favorites.all, 'list', uid ?? ''],
   },
   users: {
     all: ['users'],

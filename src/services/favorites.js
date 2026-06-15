@@ -19,6 +19,12 @@ export async function toggleFavorite(ad, currentlyFavorited) {
   }
 }
 
+export async function fetchFavorites() {
+  const res = await api.get('/favorites', silentRequest);
+  const data = unwrap(res);
+  return data.favorites || [];
+}
+
 export async function fetchFavoriteIds() {
   const res = await api.get('/favorites', silentRequest);
   const data = unwrap(res);

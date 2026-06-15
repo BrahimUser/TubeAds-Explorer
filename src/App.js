@@ -11,6 +11,7 @@ import FooterInfoPage from './components/FooterInfoPage';
 import LoginModal from './components/LoginModal';
 import MessagesDrawer from './components/MessagesDrawer';
 import MyAdsPage from './components/MyAdsPage';
+import MyFavouritesPage from './components/MyFavouritesPage';
 import VideoPlayerModal from './components/VideoPlayerModal';
 import EditAdModal from './components/EditAdModal';
 import CreateAdModal from './components/CreateAdModal';
@@ -39,9 +40,11 @@ import {
   LISTINGS_PAGE_PATH,
   SELLERS_PAGE_PATH,
   MY_ADS_PAGE_PATH,
+  MY_FAVOURITES_PAGE_PATH,
   isListingsPagePath,
   isSellersPagePath,
   isMyAdsPagePath,
+  isMyFavouritesPagePath,
 } from './utils/routing';
 
 const LISTING_PDP_RETURN_KEY = 'marketplace-listing-pdp-return';
@@ -272,6 +275,8 @@ function Shell() {
       setPage('listings');
     } else if (isMyAdsPagePath(path)) {
       setPage('listings');
+    } else if (isMyFavouritesPagePath(path)) {
+      setPage('listings');
     }
     window.scrollTo(0, 0);
   }, []);
@@ -307,6 +312,7 @@ function Shell() {
       matchCheckoutPath(pathname) ||
       isSellersPagePath(pathname) ||
       isMyAdsPagePath(pathname) ||
+      isMyFavouritesPagePath(pathname) ||
       matchFooterInfoPath(pathname)
     ) {
       resetPathToHome();
@@ -329,6 +335,18 @@ function Shell() {
       pushPath(MY_ADS_PAGE_PATH);
       setPathname(normalizePathname(MY_ADS_PAGE_PATH));
       setNavId('myads');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (id === 'myfavourites') {
+      if (!user) {
+        requireLogin();
+        return;
+      }
+      pushPath(MY_FAVOURITES_PAGE_PATH);
+      setPathname(normalizePathname(MY_FAVOURITES_PAGE_PATH));
+      setNavId('myfavourites');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -368,6 +386,7 @@ function Shell() {
   const checkoutRoute = !!checkoutMatch?.listingId;
   const sellersRoute = isSellersPagePath(pathname);
   const myAdsRoute = isMyAdsPagePath(pathname);
+  const myFavouritesRoute = isMyFavouritesPagePath(pathname);
   const footerInfoPath = matchFooterInfoPath(pathname);
   const footerInfoRoute = !!footerInfoPath;
   const isListings = page === 'listings';
@@ -379,6 +398,7 @@ function Shell() {
     !checkoutRoute &&
     !sellersRoute &&
     !myAdsRoute &&
+    !myFavouritesRoute &&
     !footerInfoRoute &&
     isListings &&
     pathNorm === '/';
@@ -389,6 +409,7 @@ function Shell() {
     !checkoutRoute &&
     !sellersRoute &&
     !myAdsRoute &&
+    !myFavouritesRoute &&
     !footerInfoRoute &&
     isListings &&
     isListingsPagePath(pathname);
@@ -400,6 +421,7 @@ function Shell() {
     checkoutRoute ||
     sellersRoute ||
     myAdsRoute ||
+    myFavouritesRoute ||
     footerInfoRoute
       ? ''
       : isListingsStandalone
@@ -503,6 +525,7 @@ function Shell() {
         !checkoutRoute &&
         !sellersRoute &&
         !myAdsRoute &&
+        !myFavouritesRoute &&
         !footerInfoRoute &&
         isListings && (
         <main>
@@ -552,6 +575,22 @@ function Shell() {
               setEditingAd(ad);
             }}
             onCreateAd={openCreateAd}
+          />
+        </main>
+      )}
+
+      {!shopRoute &&
+        !adminRoute &&
+        !listingRoute &&
+        !checkoutRoute &&
+        !sellersRoute &&
+        !footerInfoRoute &&
+        myFavouritesRoute && (
+        <main className="min-h-screen pt-4">
+          <MyFavouritesPage
+            onRequireLogin={requireLogin}
+            onOpenListing={goListingDetail}
+            onBrowseListings={goListingsPage}
           />
         </main>
       )}

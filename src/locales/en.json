@@ -140,6 +140,7 @@
     "account": "Account",
     "myOrders": "My orders",
     "myAds": "My ads",
+    "myFavourites": "My favourites",
     "myProfile": "My profile",
     "profileSignIn": "Sign in",
     "profileSignUp": "Sign up",
@@ -173,6 +174,23 @@
       "rejected": "Rejected",
       "default": "—"
     }
+  },
+  "myFavourites": {
+    "pageTitle": "My favourites",
+    "pageSubtitle": "Listings you saved for later.",
+    "signedOutTitle": "My favourites",
+    "signedOutBody": "Sign in to view your saved listings.",
+    "signIn": "Sign in",
+    "emptyTitle": "No favourites yet",
+    "emptyBody": "Tap the heart on a listing to save it here.",
+    "browse": "Browse listings",
+    "savedOn": "Saved on {{date}}",
+    "savedBadge": "Saved",
+    "view": "View listing",
+    "remove": "Remove",
+    "removing": "Removing…",
+    "listAria": "Your favourite listings",
+    "loadFailed": "Couldn't load your favourites: {{message}}"
   },
   "createAd": {
     "title": "Publish a listing",

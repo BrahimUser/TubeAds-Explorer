@@ -381,6 +381,18 @@ export default function Header({
                           <Icon name="fileText" className="h-4 w-4 shrink-0 text-brand-600" />
                           {t('navbar.myAds')}
                         </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center gap-3 px-3 py-2.5 text-start font-medium text-slate-800 transition hover:bg-orange-50/80"
+                          onClick={() => {
+                            setAccountOpen(false);
+                            onNavigate?.('myfavourites');
+                          }}
+                        >
+                          <Icon name="heartFilled" className="h-4 w-4 shrink-0 text-brand-600" />
+                          {t('navbar.myFavourites')}
+                        </button>
                         {ready && isAdmin && (
                           <button
                             type="button"

@@ -140,6 +140,7 @@
     "account": "Compte",
     "myOrders": "Mes commandes",
     "myAds": "Mes annonces",
+    "myFavourites": "Mes favoris",
     "myProfile": "Mon profil",
     "profileSignIn": "Se connecter",
     "profileSignUp": "Créer un compte",
@@ -173,6 +174,23 @@
       "default": "—"
     },
     "publish": "Publier une annonce"
+  },
+  "myFavourites": {
+    "pageTitle": "Mes favoris",
+    "pageSubtitle": "Les annonces que vous avez enregistrées.",
+    "signedOutTitle": "Mes favoris",
+    "signedOutBody": "Connectez-vous pour voir vos annonces enregistrées.",
+    "signIn": "Se connecter",
+    "emptyTitle": "Aucun favori pour le moment",
+    "emptyBody": "Appuyez sur le cœur d’une annonce pour l’enregistrer ici.",
+    "browse": "Parcourir les annonces",
+    "savedOn": "Enregistré le {{date}}",
+    "savedBadge": "Favori",
+    "view": "Voir l’annonce",
+    "remove": "Retirer",
+    "removing": "Suppression…",
+    "listAria": "Vos annonces favorites",
+    "loadFailed": "Impossible de charger vos favoris : {{message}}"
   },
   "createAd": {
     "title": "Publier une annonce",

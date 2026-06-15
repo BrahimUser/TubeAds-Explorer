@@ -14,6 +14,8 @@ export const SELLERS_PAGE_PATH = '/sellers';
 
 export const MY_ADS_PAGE_PATH = '/my-ads';
 
+export const MY_FAVOURITES_PAGE_PATH = '/my-favourites';
+
 export function isListingsPagePath(pathname) {
   return normalizePathname(pathname) === LISTINGS_PAGE_PATH;
 }
@@ -24,6 +26,10 @@ export function isSellersPagePath(pathname) {
 
 export function isMyAdsPagePath(pathname) {
   return normalizePathname(pathname) === MY_ADS_PAGE_PATH;
+}
+
+export function isMyFavouritesPagePath(pathname) {
+  return normalizePathname(pathname) === MY_FAVOURITES_PAGE_PATH;
 }
 
 export function isAdminDashboardPath(pathname) {

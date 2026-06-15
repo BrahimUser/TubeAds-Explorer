@@ -140,6 +140,7 @@
     "account": "الحساب",
     "myOrders": "طلباتي",
     "myAds": "إعلاناتي",
+    "myFavourites": "مفضلتي",
     "myProfile": "ملفي الشخصي",
     "profileSignIn": "تسجيل الدخول",
     "profileSignUp": "إنشاء حساب",
@@ -173,6 +174,23 @@
       "rejected": "مرفوض",
       "default": "—"
     }
+  },
+  "myFavourites": {
+    "pageTitle": "مفضلتي",
+    "pageSubtitle": "الإعلانات التي حفظتها لاحقاً.",
+    "signedOutTitle": "مفضلتي",
+    "signedOutBody": "سجّل الدخول لعرض إعلاناتك المحفوظة.",
+    "signIn": "تسجيل الدخول",
+    "emptyTitle": "لا توجد مفضلات بعد",
+    "emptyBody": "اضغط على القلب في أي إعلان لحفظه هنا.",
+    "browse": "تصفح الإعلانات",
+    "savedOn": "تاريخ الحفظ: {{date}}",
+    "savedBadge": "محفوظ",
+    "view": "عرض الإعلان",
+    "remove": "إزالة",
+    "removing": "جارٍ الإزالة…",
+    "listAria": "إعلاناتك المفضلة",
+    "loadFailed": "تعذر تحميل المفضلات: {{message}}"
   },
   "createAd": {
     "title": "نشر إعلان",
