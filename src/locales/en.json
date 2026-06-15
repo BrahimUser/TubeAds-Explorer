@@ -201,6 +201,14 @@
   "shop": {
     "publishListing": "Publish a listing"
   },
+  "editAd": {
+    "title": "Edit listing",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "pendingHint": "Any change will be reviewed again before it appears on the marketplace.",
+    "notOwner": "You can only edit your own listings.",
+    "removePhoto": "Remove photo"
+  },
   "adminModeration": {
     "checkingAccess": "Checking access…",
     "title": "Moderation",

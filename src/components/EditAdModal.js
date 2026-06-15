@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { CATEGORIES, CITIES, categoryFirestoreValue } from '../services/categories';
 import { updateAd } from '../services/listings';
+import { uploadFile } from '../services/uploads';
 
 function coercePriceCentsFromInput(value) {
   const raw = String(value ?? '').trim();
@@ -10,61 +13,115 @@ function coercePriceCentsFromInput(value) {
   return Math.max(0, Math.round(n * 100));
 }
 
+function categoryIdFromStored(stored) {
+  if (!stored) return '';
+  const byId = CATEGORIES.find((c) => c.id === stored);
+  if (byId) return byId.id;
+  const byLabel = CATEGORIES.find((c) => c.label === stored);
+  if (byLabel) return byLabel.id;
+  return '';
+}
+
 export default function EditAdModal({ open, ad, onClose, onSaved }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isOwner = !!user && !!ad && user.uid === ad.ownerUid;
 
   const initial = useMemo(() => {
+    const imageUrls = Array.isArray(ad?.imageUrls)
+      ? ad.imageUrls.filter((u) => typeof u === 'string' && u.trim())
+      : ad?.thumbnailUrl
+        ? [ad.thumbnailUrl]
+        : [];
     return {
       title: ad?.title || '',
+      description: ad?.description || '',
       price: typeof ad?.priceCents === 'number' ? String(ad.priceCents / 100) : '',
+      category: categoryIdFromStored(ad?.category),
+      city: ad?.city || '',
       videoUrl: ad?.videoUrl || '',
+      imageUrls,
     };
   }, [ad]);
 
   const [title, setTitle] = useState(initial.title);
+  const [description, setDescription] = useState(initial.description);
   const [price, setPrice] = useState(initial.price);
+  const [category, setCategory] = useState(initial.category);
+  const [city, setCity] = useState(initial.city);
   const [videoUrl, setVideoUrl] = useState(initial.videoUrl);
+  const [existingImageUrls, setExistingImageUrls] = useState(initial.imageUrls);
+  const [newPhotos, setNewPhotos] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     setTitle(initial.title);
+    setDescription(initial.description);
     setPrice(initial.price);
+    setCategory(initial.category);
+    setCity(initial.city);
     setVideoUrl(initial.videoUrl);
+    setExistingImageUrls(initial.imageUrls);
+    setNewPhotos([]);
     setError('');
+    setLoadingPhase(null);
   }, [initial, open]);
 
   useEffect(() => {
     function onKeyDown(e) {
-      if (e.key === 'Escape') onClose?.();
+      if (e.key === 'Escape' && !busy) onClose?.();
     }
     if (!open) return undefined;
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
+  }, [open, onClose, busy]);
+
+  function handlePhotosChange(e) {
+    const files = Array.from(e.target.files || []);
+    setNewPhotos(files);
+  }
+
+  function removeExistingImage(url) {
+    setExistingImageUrls((prev) => prev.filter((u) => u !== url));
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
     if (!ad?.id) return;
     if (!isOwner) {
-      setError("You can only edit your own listing.");
+      setError(t('editAd.notOwner'));
       return;
     }
     const nextTitle = String(title ?? '').trim();
     if (!nextTitle) {
-      setError('Title is required.');
+      setError(t('createAd.titleRequired'));
       return;
     }
 
     setBusy(true);
     setError('');
+    setLoadingPhase(newPhotos.length > 0 ? 'uploading' : 'saving');
     try {
+      const uploadedUrls = [];
+      for (const file of newPhotos) {
+        const url = await uploadFile(file);
+        uploadedUrls.push(url);
+      }
+
+      setLoadingPhase('saving');
+      const imageUrls = [...existingImageUrls, ...uploadedUrls];
+
       const patch = {
         title: nextTitle,
+        description: String(description ?? '').trim(),
         priceCents: coercePriceCentsFromInput(price),
+        category: category ? categoryFirestoreValue(category) : '',
+        city: city || '',
         videoUrl: String(videoUrl ?? '').trim(),
-        // Avito-style moderation: any edit goes back to pending validation.
+        imageUrls,
+        thumbnailUrl: imageUrls[0] || '',
         status: 'pending',
       };
       await updateAd(ad.id, patch);
@@ -74,8 +131,16 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
       setError(String(err?.message || err));
     } finally {
       setBusy(false);
+      setLoadingPhase(null);
     }
   }
+
+  const loadingMessage =
+    loadingPhase === 'uploading'
+      ? t('createAd.uploadingPhotos')
+      : t('editAd.saving');
+
+  const fieldDisabled = busy ? 'pointer-events-none opacity-60' : '';
 
   if (!open) return null;
 
@@ -83,51 +148,158 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
     <div className="fixed inset-0 z-[120]">
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t('createAd.close')}
         className="absolute inset-0 bg-black/40"
-        onClick={onClose}
+        disabled={busy}
+        onClick={() => !busy && onClose?.()}
       />
-      <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+      <div className="absolute left-1/2 top-1/2 max-h-[90vh] w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        {busy && (
+          <div
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/90 px-6 backdrop-blur-[2px]"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <span className="h-10 w-10 animate-spin rounded-full border-[3px] border-brand-200 border-t-brand-500" />
+            <p className="text-center text-sm font-semibold text-slate-800">{loadingMessage}</p>
+            <p className="text-center text-xs text-slate-500">{t('createAd.pleaseWait')}</p>
+          </div>
+        )}
+
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <div className="text-sm font-extrabold text-slate-900">Modifier mon annonce</div>
+          <div className="text-sm font-extrabold text-slate-900">{t('editAd.title')}</div>
           <button
             type="button"
-            className="rounded-lg px-2 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+            className="rounded-lg px-2 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
             onClick={onClose}
+            disabled={busy}
           >
-            Close
+            {t('createAd.close')}
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4 p-5">
+        <form onSubmit={onSubmit} className={`max-h-[calc(90vh-4rem)] space-y-4 overflow-y-auto p-5 ${fieldDisabled}`}>
+          <p className="text-xs text-slate-500">{t('editAd.pendingHint')}</p>
+
           <label className="block">
-            <div className="text-xs font-semibold text-slate-700">Title</div>
+            <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldTitle')}</div>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200"
-              placeholder="Title"
+              disabled={busy}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
+              placeholder={t('createAd.fieldTitlePlaceholder')}
               required
             />
           </label>
 
           <label className="block">
-            <div className="text-xs font-semibold text-slate-700">Price</div>
-            <input
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200"
-              placeholder="0.00"
-              inputMode="decimal"
+            <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldDescription')}</div>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              disabled={busy}
+              className="mt-1 w-full resize-y rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
+              placeholder={t('createAd.fieldDescriptionPlaceholder')}
             />
           </label>
 
           <label className="block">
-            <div className="text-xs font-semibold text-slate-700">Video URL</div>
+            <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldPrice')}</div>
+            <input
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              disabled={busy}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
+              placeholder="0"
+              inputMode="decimal"
+            />
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldCategory')}</div>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                disabled={busy}
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
+              >
+                <option value="">{t('createAd.fieldCategoryPlaceholder')}</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldCity')}</div>
+              <select
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                disabled={busy}
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
+              >
+                <option value="">{t('createAd.fieldCityPlaceholder')}</option>
+                {CITIES.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="block">
+            <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldPhotos')}</div>
+            {existingImageUrls.length > 0 && (
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {existingImageUrls.map((url) => (
+                  <li key={url} className="relative">
+                    <img
+                      src={url}
+                      alt=""
+                      className="h-16 w-16 rounded-lg border border-slate-200 object-cover"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => removeExistingImage(url)}
+                      className="absolute -end-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow"
+                      aria-label={t('editAd.removePhoto')}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              multiple
+              disabled={busy}
+              onChange={handlePhotosChange}
+              className="mt-2 w-full text-sm text-slate-600 file:me-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-700"
+            />
+            {newPhotos.length > 0 && (
+              <p className="mt-1 text-xs text-slate-500">
+                {t('createAd.photosSelected', { count: newPhotos.length })}
+              </p>
+            )}
+          </div>
+
+          <label className="block">
+            <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldVideo')}</div>
             <input
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200"
+              disabled={busy}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
               placeholder="https://…"
             />
           </label>
@@ -145,14 +317,21 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
               onClick={onClose}
               disabled={busy}
             >
-              Cancel
+              {t('createAd.cancel')}
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-brand-500 px-4 py-2 text-sm font-extrabold text-white hover:bg-brand-600 disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-sm font-extrabold text-white hover:bg-brand-600 disabled:opacity-60"
               disabled={busy}
             >
-              {busy ? 'Saving…' : 'Save changes'}
+              {busy ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  {loadingMessage}
+                </>
+              ) : (
+                t('editAd.save')
+              )}
             </button>
           </div>
         </form>
@@ -160,4 +339,3 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
     </div>
   );
 }
-

@@ -201,6 +201,14 @@
   "shop": {
     "publishListing": "نشر إعلان"
   },
+  "editAd": {
+    "title": "تعديل الإعلان",
+    "save": "حفظ التغييرات",
+    "saving": "جارٍ الحفظ…",
+    "pendingHint": "أي تعديل سيُراجع مجددًا قبل الظهور في السوق.",
+    "notOwner": "يمكنك تعديل إعلاناتك فقط.",
+    "removePhoto": "حذف الصورة"
+  },
   "adminModeration": {
     "checkingAccess": "جارٍ التحقق من الصلاحيات…",
     "title": "الإشراف",

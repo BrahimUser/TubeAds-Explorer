@@ -201,6 +201,14 @@
   "shop": {
     "publishListing": "Publier une annonce"
   },
+  "editAd": {
+    "title": "Modifier mon annonce",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "pendingHint": "Toute modification repasse en validation avant publication sur le marché.",
+    "notOwner": "Vous ne pouvez modifier que vos propres annonces.",
+    "removePhoto": "Supprimer la photo"
+  },
   "adminModeration": {
     "checkingAccess": "Vérification de l’accès…",
     "title": "Modération",
