@@ -8,7 +8,8 @@ import { AuthorizationError, NotFoundError } from '../utils/AppError.js';
 import { mapUpload } from '../utils/mappers.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadRoot = path.resolve(__dirname, '..', env.upload.dir);
+const backendRoot = path.resolve(__dirname, '..', '..');
+const uploadRoot = path.resolve(backendRoot, env.upload.dir);
 
 function ensureUploadDir() {
   if (!fs.existsSync(uploadRoot)) {

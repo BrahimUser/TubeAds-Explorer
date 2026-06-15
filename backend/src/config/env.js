@@ -27,7 +27,7 @@ export const env = {
     password: process.env.SUPER_ADMIN_PASSWORD || 'admin123456',
   },
   upload: {
-    dir: process.env.UPLOAD_DIR || 'src/uploads',
+    dir: process.env.UPLOAD_DIR || 'uploads',
     maxSizeMb: Number(process.env.MAX_UPLOAD_SIZE_MB) || 10,
   },
 };
