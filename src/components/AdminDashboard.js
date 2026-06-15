@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import useIsAdmin from '../hooks/useIsAdmin';
-import { approveListing, listenPendingAds, rejectListing } from '../services/listings';
+import { usePendingListings } from '../queries/useListings';
+import { useApproveListing, useRejectListing } from '../mutations/useModerateListing';
 import { pushPath } from '../utils/routing';
 import AdminModerationCard from './AdminModerationCard';
 import AdminModerationConfirmDialog from './AdminModerationConfirmDialog';
@@ -14,37 +15,33 @@ export default function AdminDashboard({ onRequireLogin, onNavigateHome }) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { isAdmin, ready } = useIsAdmin();
-  const [items, setItems] = useState([]);
-  const [busy, setBusy] = useState(() => new Map());
-  const [error, setError] = useState(null);
+  const { data: items = [], error: queryError } = usePendingListings({
+    enabled: !!user && ready && isAdmin,
+  });
+  const approveListing = useApproveListing();
+  const rejectListing = useRejectListing();
   const [videoAd, setVideoAd] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [toast, setToast] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
-  useEffect(() => {
-    if (!user || !ready || !isAdmin) {
-      setItems([]);
-      return undefined;
-    }
-    const unsub = listenPendingAds(
-      (pending) => {
-        setItems(pending);
-        setError(null);
-      },
-      setError,
-    );
-    return unsub;
-  }, [user, ready, isAdmin]);
+  const busy = new Map();
+  if (approveListing.isPending && approveListing.variables) {
+    busy.set(`${approveListing.variables}:approve`, true);
+  }
+  if (rejectListing.isPending && rejectListing.variables) {
+    busy.set(`${rejectListing.variables}:reject`, true);
+  }
+
+  const error = actionError || queryError?.message || null;
 
   async function runAction(ad, kind) {
     const adId = ad?.id;
     if (!adId) return false;
-    const key = `${adId}:${kind}`;
-    setBusy((prev) => new Map(prev).set(key, true));
-    setError(null);
+    setActionError(null);
     try {
-      if (kind === 'approve') await approveListing(adId);
-      else await rejectListing(adId);
+      if (kind === 'approve') await approveListing.mutateAsync(adId);
+      else await rejectListing.mutateAsync(adId);
       setToast({
         tone: 'success',
         message:
@@ -55,15 +52,9 @@ export default function AdminDashboard({ onRequireLogin, onNavigateHome }) {
       return true;
     } catch (e) {
       const message = String(e?.message || e);
-      setError(message);
+      setActionError(message);
       setToast({ tone: 'error', message });
       return false;
-    } finally {
-      setBusy((prev) => {
-        const n = new Map(prev);
-        n.delete(key);
-        return n;
-      });
     }
   }
 

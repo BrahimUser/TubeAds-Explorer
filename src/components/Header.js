@@ -8,7 +8,7 @@ import useIsAdmin from '../hooks/useIsAdmin';
 import { APP_NAME } from '../constants/branding';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import { LOCALE_STORAGE_KEY, SUPPORTED_LANGUAGES, applyLanguageToDocument } from '../i18n';
-import { listenUnreadNotificationsCount } from '../services/notifications';
+import { useUnreadNotificationsCount } from '../queries/useNotifications';
 import { Icon } from './Icons';
 
 const LANGS = [
@@ -70,7 +70,7 @@ export default function Header({
   const [langOpen, setLangOpen] = useState(false);
   const langWrapRef = useRef(null);
   const accountWrapRef = useRef(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { data: unreadCount = 0 } = useUnreadNotificationsCount(user?.uid, { enabled: !!user });
   const [notifOpen, setNotifOpen] = useState(false);
   const notifWrapRef = useRef(null);
 
@@ -91,16 +91,7 @@ export default function Header({
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setUnreadCount(0);
-      setNotifOpen(false);
-      return undefined;
-    }
-    return listenUnreadNotificationsCount(
-      user.uid,
-      (count) => setUnreadCount(count || 0),
-      (err) => console.warn('notifications listener', err),
-    );
+    if (!user) setNotifOpen(false);
   }, [user]);
 
   const MOBILE_NAV = [

@@ -2,12 +2,8 @@
  * User profiles via Express API.
  */
 import api, { silentRequest, unwrap } from '../api/client';
-import { createPoller } from '../hooks/usePolling';
 
 export const USERS_COLLECTION = 'users';
-
-const USER_PROFILE_CACHE_MS = 5 * 60 * 1000;
-const userProfileCache = new Map();
 
 export function normalizeUserProfile(uid, raw) {
   if (!raw || typeof raw !== 'object') {
@@ -43,28 +39,8 @@ export async function ensureUserProfileFromPhoneAuth(user) {
   return user;
 }
 
-export async function fetchUser(uid, requestConfig) {
-  const cached = userProfileCache.get(uid);
-  if (cached && Date.now() - cached.at < USER_PROFILE_CACHE_MS) {
-    return cached.profile;
-  }
+export async function fetchUser(uid, requestConfig = silentRequest) {
   const res = await api.get(`/users/${uid}`, requestConfig);
   const { user } = unwrap(res);
-  const profile = normalizeUserProfile(uid, user);
-  userProfileCache.set(uid, { profile, at: Date.now() });
-  return profile;
-}
-
-/** Polling replacement for Firestore onSnapshot on users/{uid}. */
-export function subscribeUser(uid, onChange, onError) {
-  if (!uid) {
-    onChange(normalizeUserProfile('', null));
-    return () => {};
-  }
-  return createPoller(
-    () => fetchUser(uid, silentRequest),
-    onChange,
-    onError,
-    10000,
-  );
+  return normalizeUserProfile(uid, user);
 }

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icons';
 import { useAuth } from '../context/AuthContext';
-import { buildMoroccoE164, mapFirebaseAuthError, registerWithPhonePassword, signInWithPhonePassword } from '../services/phonePasswordAuth';
+import { buildMoroccoE164, mapFirebaseAuthError } from '../services/phonePasswordAuth';
+import { useLogin, useRegister } from '../mutations/useAuth';
 
 /**
  * Phone + password (no SMS). Session = JWT tokens in localStorage.
@@ -16,14 +17,17 @@ import { buildMoroccoE164, mapFirebaseAuthError, registerWithPhonePassword, sign
 export default function LoginModal({ open, authIntent = 'signin', onClose, onSignedIn }) {
   const { t } = useTranslation();
   const { refreshSession } = useAuth();
+  const loginMutation = useLogin();
+  const registerMutation = useRegister();
   const isSignUp = authIntent === 'signup';
   const [localPhone, setLocalPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+
+  const busy = loginMutation.isPending || registerMutation.isPending;
 
   useEffect(() => {
     if (!open) {
@@ -33,7 +37,6 @@ export default function LoginModal({ open, authIntent = 'signin', onClose, onSig
       setShowPassword(false);
       setShowConfirm(false);
       setError(null);
-      setBusy(false);
     }
   }, [open, authIntent]);
 
@@ -56,20 +59,17 @@ export default function LoginModal({ open, authIntent = 'signin', onClose, onSig
       return;
     }
 
-    setBusy(true);
     try {
       if (isSignUp) {
-        await registerWithPhonePassword(localPhone, password);
+        await registerMutation.mutateAsync({ phone: localPhone, password });
       } else {
-        await signInWithPhonePassword(localPhone, password);
+        await loginMutation.mutateAsync({ phone: localPhone, password });
       }
       await refreshSession?.();
       onClose();
       onSignedIn?.();
     } catch (err) {
       setError(err?.code ? mapFirebaseAuthError(err) : err?.message || t('authModal.errors.generic'));
-    } finally {
-      setBusy(false);
     }
   }
 

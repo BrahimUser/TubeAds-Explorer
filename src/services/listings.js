@@ -1,6 +1,5 @@
 // Marketplace listings — Express API (replaces Firestore `listings` collection).
 import api, { silentRequest, unwrap } from '../api/client';
-import { createPoller } from '../hooks/usePolling';
 import { categoryFirestoreValue } from './categories';
 
 export const ANNONCES_COLLECTION = 'listings';
@@ -129,61 +128,10 @@ export function parseAd(id, raw) {
   };
 }
 
-function timestampMs(ts) {
-  if (!ts) return 0;
-  if (typeof ts === 'string') return new Date(ts).getTime();
-  if (ts instanceof Date) return ts.getTime();
-  if (typeof ts === 'number') return ts;
-  return 0;
-}
-
-async function fetchListings(params) {
+export async function fetchListings(params) {
   const res = await api.get('/listings', { ...silentRequest, params });
   const { items } = unwrap(res);
   return (items || []).map((d) => parseAd(d.id, d));
-}
-
-export function listenAds({ max = 120 } = {}, onChange, onError) {
-  return createPoller(
-    async () => {
-      const items = await fetchListings({ status: 'approved', limit: max });
-      items.sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt));
-      return items.slice(0, max);
-    },
-    onChange,
-    onError,
-    10000,
-  );
-}
-
-export function listenPendingAds(onChange, onError) {
-  return createPoller(
-    async () => {
-      const items = await fetchListings({ status: 'pending', limit: 100 });
-      items.sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt));
-      return items;
-    },
-    onChange,
-    onError,
-    10000,
-  );
-}
-
-export function listenListingsByOwner(ownerUid, onChange, onError) {
-  if (!ownerUid) {
-    onChange([]);
-    return () => {};
-  }
-  return createPoller(
-    async () => {
-      const items = await fetchListings({ ownerId: ownerUid, limit: 100 });
-      items.sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt));
-      return items;
-    },
-    onChange,
-    onError,
-    10000,
-  );
 }
 
 export async function getAd(adId) {
@@ -225,8 +173,4 @@ export async function rejectListing(adId) {
 export function adIsVisibleOnPublicHome(ad) {
   const s = String(ad?.status ?? '').toLowerCase();
   return s === 'approved';
-}
-
-export function listenMyAds(uid, onChange, onError) {
-  return listenListingsByOwner(uid, onChange, onError);
 }

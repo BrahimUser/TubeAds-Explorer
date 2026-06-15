@@ -10,15 +10,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import { useAuth } from '../context/AuthContext';
-import { useSellerProfiles } from '../hooks/useSellerProfiles';
+import { useSellerProfiles } from '../queries/useUsers';
+import { useApprovedListings } from '../queries/useListings';
+import { useFavoriteIds } from '../queries/useFavorites';
 import {
   ANNONCES_COLLECTION,
   adIsVisibleOnPublicHome,
   adMatchesCity,
   adMatchesSelectedCategory,
-  listenAds,
 } from '../services/listings';
-import { listenFavoriteIds } from '../services/favorites';
 import AdCard from './AdCard';
 import PopularNowSidebar from './sidebars/PopularNowSidebar';
 import TopSellersSidebar from './sidebars/TopSellersSidebar';
@@ -46,47 +46,11 @@ export default function RecentListings({
 }) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [ads, setAds] = useState([]);
-  const [status, setStatus] = useState('loading');
-  const [error, setError] = useState(null);
-  const [favIds, setFavIds] = useState(() => new Set());
+  const { data: ads = [], isLoading, isError, error } = useApprovedListings();
+  const { data: favIds = new Set() } = useFavoriteIds(user?.uid, { enabled: !!user });
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    setStatus('loading');
-    const off = listenAds(
-      { max: 120 },
-      (items) => {
-        setAds(items);
-        setStatus('ready');
-        setError(null);
-      },
-      (err) => {
-        setError(err);
-        setStatus('error');
-      },
-    );
-    return off;
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
-      setFavIds(new Set());
-      return undefined;
-    }
-    return listenFavoriteIds(user.uid, setFavIds, (err) =>
-      console.warn('favorites listener', err),
-    );
-  }, [user]);
-
-  function handleFavoriteChange(adId, favorited) {
-    setFavIds((prev) => {
-      const next = new Set(prev);
-      if (favorited) next.add(adId);
-      else next.delete(adId);
-      return next;
-    });
-  }
+  const status = isLoading ? 'loading' : isError ? 'error' : 'ready';
 
   const publishedAds = useMemo(() => ads.filter(adIsVisibleOnPublicHome), [ads]);
 
@@ -187,7 +151,6 @@ export default function RecentListings({
           key={ad.id}
           ad={ad}
           isFavorite={favIds.has(ad.id)}
-          onFavoriteChange={handleFavoriteChange}
           onRequireLogin={onRequireLogin}
           onPlay={onPlay}
           onOpenDetail={onOpenListing ? (a) => onOpenListing(a.id) : undefined}

@@ -1,9 +1,13 @@
 // JWT session via Express API (replaces Firebase Auth).
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import api, { clearTokens, getAccessToken, getRefreshToken, silentRequest, unwrap } from '../api/client';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { disconnectSocket } from '../services/socket';
 import { isSuperAdminUid } from '../constants/superAdmin';
-import { makeEmptyUserProfile, subscribeUser } from '../services/users';
+import { makeEmptyUserProfile } from '../services/users';
+import { useAuthMe, clearAuthAndCache } from '../queries/useAuth';
+import { useUser } from '../queries/useUsers';
+import { queryKeys } from '../queries/keys';
+import api, { getRefreshToken } from '../api/client';
 
 const AuthContext = createContext({
   user: null,
@@ -16,85 +20,25 @@ const AuthContext = createContext({
   signOut: async () => {},
 });
 
-function toAuthUser(profile) {
-  if (!profile) return null;
-  return {
-    uid: profile.id || profile.uid,
-    id: profile.id || profile.uid,
-    phoneNumber: profile.phoneNumber,
-    displayName: profile.displayName || profile.phoneNumber,
-    email: null,
-  };
-}
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [ready, setReady] = useState(false);
-  const [userProfile, setUserProfile] = useState(null);
-  const [profileReady, setProfileReady] = useState(false);
+  const queryClient = useQueryClient();
   const superAdminLogRef = useRef(null);
 
-  const loadSession = useCallback(async () => {
-    const token = getAccessToken();
-    if (!token) {
-      setUser(null);
-      setUserProfile(null);
-      setProfileReady(true);
-      setReady(true);
-      return;
-    }
-    try {
-      const res = await api.get('/auth/me', silentRequest);
-      const { user: profile } = unwrap(res);
-      setUser(toAuthUser(profile));
-      setUserProfile({
-        uid: profile.id,
-        isPro: profile.isPro,
-        role: String(profile.role || '').toLowerCase(),
-        shopName: profile.shopName || '',
-        shopLogoUrl: profile.shopLogoUrl || '',
-        shopDescription: profile.shopDescription || '',
-        phoneNumber: profile.phoneNumber || '',
-      });
-      setProfileReady(true);
-    } catch {
-      clearTokens();
-      setUser(null);
-      setUserProfile(null);
-      setProfileReady(true);
-    } finally {
-      setReady(true);
-    }
-  }, []);
+  const { data: session, isLoading: sessionLoading, refetch: refetchSession } = useAuthMe();
+  const user = session?.user ?? null;
 
-  useEffect(() => {
-    loadSession();
-  }, [loadSession]);
+  const {
+    data: userProfile,
+    isLoading: profileLoading,
+    isError: profileError,
+  } = useUser(user?.uid, { enabled: !!user?.uid });
+
+  const ready = !sessionLoading;
+  const profileReady = !user?.uid || (!profileLoading && (profileError || !!userProfile));
 
   useEffect(() => {
     if (!user) superAdminLogRef.current = null;
   }, [user]);
-
-  useEffect(() => {
-    if (!user?.uid) {
-      setUserProfile(null);
-      setProfileReady(false);
-      return undefined;
-    }
-    setProfileReady(false);
-    const off = subscribeUser(
-      user.uid,
-      (profile) => {
-        setUserProfile(profile);
-        setProfileReady(true);
-      },
-      () => {
-        setUserProfile(makeEmptyUserProfile(user.uid));
-        setProfileReady(true);
-      },
-    );
-    return off;
-  }, [user?.uid]);
 
   useEffect(() => {
     if (!user?.uid || !isSuperAdminUid(user.uid)) return;
@@ -104,19 +48,26 @@ export function AuthProvider({ children }) {
     console.log('Super Admin Detected: Access Granted');
   }, [user?.uid]);
 
+  const resolvedProfile = useMemo(() => {
+    if (!user?.uid) return null;
+    if (userProfile) return userProfile;
+    if (profileReady) return makeEmptyUserProfile(user.uid);
+    return null;
+  }, [user?.uid, userProfile, profileReady]);
+
   const role = useMemo(() => {
     if (!user) return null;
     if (isSuperAdminUid(user.uid)) return 'admin';
     if (!profileReady) return null;
-    return userProfile?.role === 'admin' ? 'admin' : 'user';
-  }, [user, profileReady, userProfile?.role]);
+    return resolvedProfile?.role === 'admin' ? 'admin' : 'user';
+  }, [user, profileReady, resolvedProfile?.role]);
 
   const isAdmin = useMemo(() => {
     if (!user) return false;
     if (isSuperAdminUid(user.uid)) return true;
     if (!profileReady) return false;
-    return userProfile?.role === 'admin';
-  }, [user, profileReady, userProfile?.role]);
+    return resolvedProfile?.role === 'admin';
+  }, [user, profileReady, resolvedProfile?.role]);
 
   const signOut = useCallback(async () => {
     try {
@@ -127,26 +78,28 @@ export function AuthProvider({ children }) {
     } catch {
       // best-effort
     }
-    clearTokens();
     disconnectSocket();
-    setUser(null);
-    setUserProfile(null);
-    setProfileReady(true);
-  }, []);
+    clearAuthAndCache(queryClient);
+  }, [queryClient]);
+
+  const refreshSession = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
+    return refetchSession();
+  }, [queryClient, refetchSession]);
 
   const value = useMemo(
     () => ({
       user,
       ready,
       isLoggedIn: !!user,
-      userProfile,
+      userProfile: resolvedProfile,
       profileReady,
       role,
       isAdmin,
       signOut,
-      refreshSession: loadSession,
+      refreshSession,
     }),
-    [user, ready, userProfile, profileReady, role, isAdmin, signOut, loadSession],
+    [user, ready, resolvedProfile, profileReady, role, isAdmin, signOut, refreshSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -4,10 +4,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { getAd } from '../services/listings';
+import { useListing } from '../queries/useListings';
+import { useUser } from '../queries/useUsers';
+import { useCreateChatThread } from '../mutations/useChat';
 import { categoryLabel, cityLabel } from '../services/categories';
-import { fetchUser, normalizeUserProfile } from '../services/users';
-import { getOrCreateChatThreadForAd } from '../services/chat';
+import { normalizeUserProfile } from '../services/users';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import { Icon } from './Icons';
 
@@ -101,53 +102,19 @@ export default function ProductDetailPage({
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'fr';
   const { user } = useAuth();
-  const [ad, setAd] = useState(null);
-  const [seller, setSeller] = useState(null);
-  const [status, setStatus] = useState('loading');
-  const [error, setError] = useState(null);
+  const { data: ad, isLoading, isError, error } = useListing(listingId);
+  const { data: seller } = useUser(ad?.ownerUid, { enabled: !!ad?.ownerUid });
+  const createChatThread = useCreateChatThread();
   const [activeIndex, setActiveIndex] = useState(0);
-  const [contacting, setContacting] = useState(false);
   const [contactError, setContactError] = useState(null);
 
   useEffect(() => {
-    let cancelled = false;
-    setStatus('loading');
-    setError(null);
     setActiveIndex(0);
-    (async () => {
-      try {
-        const next = await getAd(listingId);
-        if (cancelled) return;
-        if (!next) {
-          setAd(null);
-          setSeller(null);
-          setStatus('missing');
-          return;
-        }
-        setAd(next);
-        setStatus('ready');
-        if (next.ownerUid) {
-          try {
-            const profile = await fetchUser(next.ownerUid);
-            if (cancelled) return;
-            setSeller(profile);
-          } catch {
-            if (!cancelled) setSeller(normalizeUserProfile(next.ownerUid, null));
-          }
-        } else {
-          setSeller(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(e);
-          setStatus('error');
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
   }, [listingId]);
+
+  const status = isLoading ? 'loading' : isError ? 'error' : ad ? 'ready' : 'missing';
+  const contacting = createChatThread.isPending;
+  const resolvedSeller = seller ?? (ad?.ownerUid ? normalizeUserProfile(ad.ownerUid, null) : null);
 
   const images = useMemo(() => {
     if (!ad) return [];
@@ -173,17 +140,13 @@ export default function ProductDetailPage({
       return;
     }
     setContactError(null);
-    setContacting(true);
     try {
-      const threadId = await getOrCreateChatThreadForAd(ad);
+      const threadId = await createChatThread.mutateAsync(ad);
       onOpenMessages?.(threadId);
     } catch (err) {
       console.error('getOrCreateChatThreadForAd', err);
       setContactError(err);
-      // Still open the messages drawer so the user can see existing chats.
       onOpenMessages?.();
-    } finally {
-      setContacting(false);
     }
   }
 
@@ -243,7 +206,7 @@ export default function ProductDetailPage({
   }
 
   const displayName =
-    seller?.shopName?.trim() || `${t('product.seller')} · ${ad.ownerUid?.slice(0, 8) || '—'}…`;
+    resolvedSeller?.shopName?.trim() || `${t('product.seller')} · ${ad.ownerUid?.slice(0, 8) || '—'}…`;
 
   return (
     <main
@@ -433,8 +396,8 @@ export default function ProductDetailPage({
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_14px_rgba(15,23,42,0.06)]">
                 <div className="flex items-center gap-3">
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2 ring-slate-100">
-                    {seller?.shopLogoUrl ? (
-                      <img src={seller.shopLogoUrl} alt="" className="h-full w-full object-cover" />
+                    {resolvedSeller?.shopLogoUrl ? (
+                      <img src={resolvedSeller.shopLogoUrl} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-lg font-bold text-slate-400">
                         {(displayName[0] || '?').toUpperCase()}
@@ -444,7 +407,7 @@ export default function ProductDetailPage({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <p className="truncate font-bold text-slate-900">{displayName}</p>
-                      {seller?.isPro && (
+                      {resolvedSeller?.isPro && (
                         <span className="shrink-0 text-emerald-600" title={t('product.proAccount')}>
                           <Icon name="check" className="h-4 w-4" />
                         </span>

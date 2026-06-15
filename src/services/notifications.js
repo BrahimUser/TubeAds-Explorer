@@ -1,5 +1,4 @@
 import api, { getAccessToken, silentRequest, unwrap } from '../api/client';
-import { createPoller } from '../hooks/usePolling';
 
 export function buildSenderName(user) {
   if (!user) return '';
@@ -15,39 +14,17 @@ export async function createNotification(input) {
   console.warn('createNotification: handled by backend', input);
 }
 
-export function listenUnreadNotificationsCount(uid, onCount, onError) {
-  if (!uid) {
-    onCount?.(0);
-    return () => {};
-  }
-  return createPoller(
-    async () => {
-      if (!getAccessToken()) return 0;
-      const res = await api.get('/notifications/unread-count', silentRequest);
-      const data = unwrap(res);
-      return data.count || 0;
-    },
-    (count) => onCount?.(count),
-    onError,
-    15000,
-  );
+export async function fetchUnreadNotificationsCount() {
+  if (!getAccessToken()) return 0;
+  const res = await api.get('/notifications/unread-count', silentRequest);
+  const data = unwrap(res);
+  return data.count || 0;
 }
 
-export function listenRecentNotifications(uid, onChange, onError) {
-  if (!uid) {
-    onChange?.([]);
-    return () => {};
-  }
-  return createPoller(
-    async () => {
-      const res = await api.get('/notifications', silentRequest);
-      const { notifications } = unwrap(res);
-      return notifications || [];
-    },
-    onChange,
-    onError,
-    15000,
-  );
+export async function fetchRecentNotifications() {
+  const res = await api.get('/notifications', silentRequest);
+  const { notifications } = unwrap(res);
+  return notifications || [];
 }
 
 export async function markNotificationRead(notificationId) {

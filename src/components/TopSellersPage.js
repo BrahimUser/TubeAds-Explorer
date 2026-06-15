@@ -9,9 +9,10 @@
  * Affiché en remplacement de la grille d'annonces / sidebars quand
  * l'utilisateur clique sur « Voir tout » à côté de Top vendeurs.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { adIsVisibleOnPublicHome, listenAds } from '../services/listings';
-import { useSellerProfiles } from '../hooks/useSellerProfiles';
+import { useMemo, useState } from 'react';
+import { adIsVisibleOnPublicHome } from '../services/listings';
+import { useApprovedListings } from '../queries/useListings';
+import { useSellerProfiles } from '../queries/useUsers';
 import { ratingMeta } from '../utils/sellerRating';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import { Icon } from './Icons';
@@ -165,26 +166,10 @@ function buildPageList(current, total) {
 }
 
 export default function TopSellersPage({ onClose, onNavigateHome, onVisitShop }) {
-  const [ads, setAds] = useState([]);
-  const [status, setStatus] = useState('loading');
-  const [error, setError] = useState(null);
+  const { data: ads = [], isLoading, isError, error } = useApprovedListings();
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    setStatus('loading');
-    return listenAds(
-      { max: 120 },
-      (items) => {
-        setAds(items);
-        setStatus('ready');
-        setError(null);
-      },
-      (err) => {
-        setError(err);
-        setStatus('error');
-      },
-    );
-  }, []);
+  const status = isLoading ? 'loading' : isError ? 'error' : 'ready';
 
   const publishedAds = useMemo(() => ads.filter(adIsVisibleOnPublicHome), [ads]);
 

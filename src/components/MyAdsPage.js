@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { deleteAd, listenListingsByOwner } from '../services/listings';
+import { useOwnerListings } from '../queries/useListings';
+import { useDeleteListing } from '../mutations/useDeleteListing';
 import { Icon } from './Icons';
 
 const CURRENCY_SUFFIX = { MAD: 'MAD', EUR: '€', USD: '$' };
@@ -57,49 +58,28 @@ export default function MyAdsPage({ onRequireLogin, onEditAd, onCreateAd }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'fr';
   const { user, ready } = useAuth();
-  const [ads, setAds] = useState([]);
-  const [status, setStatus] = useState('loading');
-  const [error, setError] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
+  const { data: ads = [], isLoading, isError, error } = useOwnerListings(user?.uid, {
+    enabled: !!user?.uid,
+  });
+  const deleteListing = useDeleteListing();
+
+  const status = isLoading ? 'loading' : isError ? 'error' : 'ready';
+  const deletingId = deleteListing.isPending ? deleteListing.variables : null;
 
   useEffect(() => {
     if (ready && !user) onRequireLogin?.();
   }, [ready, user, onRequireLogin]);
-
-  useEffect(() => {
-    if (!user?.uid) {
-      setAds([]);
-      setStatus('ready');
-      return undefined;
-    }
-    setStatus('loading');
-    setError(null);
-    return listenListingsByOwner(
-      user.uid,
-      (list) => {
-        setAds(list);
-        setStatus('ready');
-      },
-      (err) => {
-        setError(err);
-        setStatus('error');
-      },
-    );
-  }, [user?.uid]);
 
   async function handleDelete(ad) {
     if (!ad?.id || !user?.uid) return;
     if (ad.ownerUid !== user.uid) return;
     // eslint-disable-next-line no-alert
     if (!window.confirm(t('myAds.deleteConfirm'))) return;
-    setDeletingId(ad.id);
     try {
-      await deleteAd(ad.id);
+      await deleteListing.mutateAsync(ad.id);
     } catch (e) {
       // eslint-disable-next-line no-alert
       window.alert(String(e?.message || e));
-    } finally {
-      setDeletingId(null);
     }
   }
 

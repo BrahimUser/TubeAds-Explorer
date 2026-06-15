@@ -1,22 +1,9 @@
 import axios from 'axios';
-import { endLoading, startLoading } from './loadingTracker';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3002/api';
 
-/** Pass as the axios config (or merge into it) to skip the global loading overlay. */
+/** Pass as the axios config (or merge into it) to skip optional request metadata. */
 export const silentRequest = { skipGlobalLoading: true };
-
-function trackLoading(config) {
-  if (config?.skipGlobalLoading) return;
-  config._loadingTracked = true;
-  startLoading();
-}
-
-function untrackLoading(config) {
-  if (!config?._loadingTracked) return;
-  config._loadingTracked = false;
-  endLoading();
-}
 
 const ACCESS_KEY = 'marketplace-access-token';
 const REFRESH_KEY = 'marketplace-refresh-token';
@@ -49,20 +36,14 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  trackLoading(config);
   return config;
 });
 
 let refreshPromise = null;
 
 api.interceptors.response.use(
-  (res) => {
-    untrackLoading(res.config);
-    return res;
-  },
+  (res) => res,
   async (err) => {
-    untrackLoading(err.config);
-
     const original = err.config;
     if (err.response?.status !== 401 || original._retry) {
       return Promise.reject(err);

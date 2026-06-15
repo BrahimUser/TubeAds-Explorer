@@ -1,12 +1,9 @@
 // Slide-in messages panel. Thread list and messages update in real time via Socket.IO.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import {
-  listenChatThreads,
-  listenThreadMessages,
-  sendChatMessage,
-} from '../services/chat';
-import { useSellerProfiles } from '../hooks/useSellerProfiles';
+import { useChatThreads, useChatMessages } from '../queries/useChat';
+import { useSendMessage } from '../mutations/useChat';
+import { useSellerProfiles } from '../queries/useUsers';
 import { Icon } from './Icons';
 
 function tsMs(ts) {
@@ -39,11 +36,6 @@ function formatRelative(ts) {
   return `Il y a ${Math.round(d / 7)} sem.`;
 }
 
-/**
- * Firestore returns `failed-precondition` while a composite index is still
- * being provisioned (or hasn't been created yet). We use this to render a
- * "building index" loader instead of the scarier red error banner.
- */
 function isIndexBuildingError(err) {
   if (!err) return false;
   if (err.code === 'failed-precondition') return true;
@@ -86,12 +78,16 @@ export default function MessagesDrawer({
   initialThreadId = null,
 }) {
   const { user } = useAuth();
-  const [threads, setThreads] = useState([]);
   const [activeId, setActiveId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
+
+  const {
+    data: threads = [],
+    isLoading,
+    isError,
+    error,
+  } = useChatThreads(user?.uid, { enabled: open && !!user });
 
   useEffect(() => {
     if (open) {
@@ -113,54 +109,19 @@ export default function MessagesDrawer({
       onClose();
       return undefined;
     }
-    setLoading(true);
-    setError(null);
+    return undefined;
+  }, [open, user, onClose, onRequireLogin]);
 
-    // Real-time inbox: initial load via REST, then Socket.IO pushes thread updates.
-    let unsubscribe = null;
-    let retryTimer = null;
-    let cancelled = false;
+  useEffect(() => {
+    if (!open || !threads.length) return;
+    setActiveId((prev) => {
+      if (initialThreadId && threads.some((t) => t.id === initialThreadId)) {
+        return initialThreadId;
+      }
+      return prev ?? threads[0]?.id ?? null;
+    });
+  }, [open, initialThreadId, threads]);
 
-    const subscribe = () => {
-      if (cancelled) return;
-      unsubscribe = listenChatThreads(
-        user.uid,
-        (list) => {
-          // Each successful load clears any previous error.
-          setError(null);
-          setThreads(list);
-          setLoading(false);
-          setActiveId((prev) => {
-            if (initialThreadId && list.some((t) => t.id === initialThreadId)) {
-              return initialThreadId;
-            }
-            return prev ?? list[0]?.id ?? null;
-          });
-        },
-        (err) => {
-          setError(err);
-          setLoading(false);
-          // Retry after transient socket/API errors.
-          if (unsubscribe) {
-            unsubscribe();
-            unsubscribe = null;
-          }
-          retryTimer = window.setTimeout(subscribe, 30000);
-        },
-      );
-    };
-
-    subscribe();
-
-    return () => {
-      cancelled = true;
-      if (retryTimer) window.clearTimeout(retryTimer);
-      if (unsubscribe) unsubscribe();
-    };
-  }, [open, user, onClose, onRequireLogin, initialThreadId]);
-
-  // If a specific thread is requested (e.g. from "Contacter le vendeur"),
-  // make it the active one as soon as it shows up in the live thread list.
   useEffect(() => {
     if (!open || !initialThreadId) return;
     setActiveId(initialThreadId);
@@ -203,8 +164,8 @@ export default function MessagesDrawer({
           threads={threads}
           activeId={activeId}
           setActiveId={setActiveId}
-          loading={loading}
-          error={error}
+          loading={isLoading}
+          error={isError ? error : null}
         />
       </aside>
     </div>
@@ -212,9 +173,6 @@ export default function MessagesDrawer({
 }
 
 function DrawerBody({ user, threads, activeId, setActiveId, loading, error }) {
-  // Resolve the "other person" on every thread once, so the list and the
-  // active-chat header can both display their name/avatar without redundant
-  // fetches.
   const otherUids = useMemo(() => {
     const set = new Set();
     for (const t of threads) {
@@ -285,8 +243,6 @@ function IndexBuildingNotice() {
 function ThreadList({ user, profiles, threads, activeId, onSelect, loading, error }) {
   if (loading) return <ThreadListSkeleton />;
 
-  // While the composite index is still being provisioned by Firestore,
-  // show a friendly progress notice instead of the red "couldn't load" error.
   if (error && isIndexBuildingError(error)) {
     return <IndexBuildingNotice />;
   }
@@ -380,24 +336,17 @@ function ThreadList({ user, profiles, threads, activeId, onSelect, loading, erro
 }
 
 function ChatPane({ user, thread, profiles }) {
-  const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState(null);
   const scrollerRef = useRef(null);
+  const sendMessage = useSendMessage();
+
+  const { data: messages = [] } = useChatMessages(thread?.id, {
+    enabled: !!thread?.id,
+  });
 
   const otherUid = thread ? otherUidFor(thread, user?.uid) : '';
   const otherProfile = otherUid ? profiles?.[otherUid] : null;
   const otherName = displayNameFor(otherUid, otherProfile);
-
-  useEffect(() => {
-    setMessages([]);
-    if (!thread) return undefined;
-    // Real-time messages: initial load via REST, then Socket.IO pushes new messages.
-    return listenThreadMessages(thread.id, setMessages, (err) =>
-      console.warn('messages listener', err),
-    );
-  }, [thread]);
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -405,6 +354,7 @@ function ChatPane({ user, thread, profiles }) {
   }, [messages]);
 
   const sortedMessages = useMemo(() => messages.slice(), [messages]);
+  const sendError = sendMessage.error;
 
   if (!thread) {
     return (
@@ -417,24 +367,20 @@ function ChatPane({ user, thread, profiles }) {
   async function handleSend(e) {
     e.preventDefault();
     const text = draft.trim();
-    if (!text || sending) return;
-    setSending(true);
-    setSendError(null);
+    if (!text || sendMessage.isPending) return;
     try {
-      const sent = await sendChatMessage(thread.id, text, {
-        listingId: thread.listingId || thread.adId || null,
-        recipientId: otherUid,
-        senderName: user?.displayName || user?.email || '',
+      await sendMessage.mutateAsync({
+        threadId: thread.id,
+        text,
+        options: {
+          listingId: thread.listingId || thread.adId || null,
+          recipientId: otherUid,
+          senderName: user?.displayName || user?.email || '',
+        },
       });
-      if (sent) {
-        setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
-      }
       setDraft('');
     } catch (err) {
       console.error('sendChatMessage', err);
-      setSendError(err);
-    } finally {
-      setSending(false);
     }
   }
 
@@ -548,12 +494,12 @@ function ChatPane({ user, thread, profiles }) {
         />
         <button
           type="submit"
-          disabled={!draft.trim() || sending}
+          disabled={!draft.trim() || sendMessage.isPending}
           className="inline-flex items-center gap-2 rounded-full bg-brand-500 hover:bg-brand-600 text-white px-4 h-10 text-sm font-bold disabled:opacity-50 transition"
           aria-label="Envoyer"
         >
           <Icon name="send" className="w-4 h-4" />
-          <span className="hidden sm:inline">{sending ? 'Envoi…' : 'Envoyer'}</span>
+          <span className="hidden sm:inline">{sendMessage.isPending ? 'Envoi…' : 'Envoyer'}</span>
         </button>
       </form>
     </div>

@@ -1,6 +1,5 @@
 // Per-user favorites via Express API.
 import api, { getAccessToken, silentRequest, unwrap } from '../api/client';
-import { createPoller } from '../hooks/usePolling';
 
 export async function addFavorite(ad) {
   if (!getAccessToken()) throw new Error('You must be signed in to manage favorites.');
@@ -20,20 +19,9 @@ export async function toggleFavorite(ad, currentlyFavorited) {
   }
 }
 
-export function listenFavoriteIds(uid, onChange, onError) {
-  if (!uid) {
-    onChange(new Set());
-    return () => {};
-  }
-  return createPoller(
-    async () => {
-      const res = await api.get('/favorites', silentRequest);
-      const data = unwrap(res);
-      const ids = data.ids || (data.favorites || []).map((f) => f.listingId || f.adId);
-      return new Set(ids);
-    },
-    onChange,
-    onError,
-    10000,
-  );
+export async function fetchFavoriteIds() {
+  const res = await api.get('/favorites', silentRequest);
+  const data = unwrap(res);
+  const ids = data.ids || (data.favorites || []).map((f) => f.listingId || f.adId);
+  return new Set(ids);
 }

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { subscribeUser } from '../services/users';
-import { adIsVisibleOnPublicHome, listenListingsByOwner } from '../services/listings';
-import { listenFavoriteIds } from '../services/favorites';
+import { useUser } from '../queries/useUsers';
+import { useOwnerListings } from '../queries/useListings';
+import { useFavoriteIds } from '../queries/useFavorites';
+import { adIsVisibleOnPublicHome } from '../services/listings';
 import { pushPath } from '../utils/routing';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import AdCard from './AdCard';
@@ -26,61 +27,19 @@ export default function ShopPage({
 }) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [seller, setSeller] = useState(null);
-  const [allAds, setAllAds] = useState([]);
-  const [status, setStatus] = useState('loading');
-  const [loadErr, setLoadErr] = useState(null);
-  const [favIds, setFavIds] = useState(() => new Set());
+  const { data: seller } = useUser(sellerId, { enabled: !!sellerId });
+  const { data: allAds = [], isLoading, isError, error: loadErr } = useOwnerListings(sellerId, {
+    enabled: !!sellerId,
+  });
+  const { data: favIds = new Set() } = useFavoriteIds(user?.uid, { enabled: !!user });
 
   const isOwnShop = !!user?.uid && user.uid === sellerId;
+  const status = isLoading ? 'loading' : isError ? 'error' : 'ready';
 
   const ads = useMemo(
     () => allAds.filter((ad) => isVisibleOnShop(ad, isOwnShop)),
     [allAds, isOwnShop],
   );
-
-  useEffect(() => {
-    if (!sellerId) return undefined;
-    return subscribeUser(sellerId, setSeller, (err) =>
-      // eslint-disable-next-line no-console
-      console.warn('users doc', err),
-    );
-  }, [sellerId]);
-
-  useEffect(() => {
-    if (!sellerId) return undefined;
-    setStatus('loading');
-    const off = listenListingsByOwner(
-      sellerId,
-      (items) => {
-        setAllAds(items);
-        setStatus('ready');
-        setLoadErr(null);
-      },
-      (err) => {
-        setLoadErr(err);
-        setStatus('error');
-      },
-    );
-    return off;
-  }, [sellerId]);
-
-  useEffect(() => {
-    if (!user) {
-      setFavIds(new Set());
-      return undefined;
-    }
-    return listenFavoriteIds(user.uid, setFavIds, () => {});
-  }, [user]);
-
-  function handleFavoriteChange(adId, favorited) {
-    setFavIds((prev) => {
-      const next = new Set(prev);
-      if (favorited) next.add(adId);
-      else next.delete(adId);
-      return next;
-    });
-  }
 
   const displayName = useMemo(() => {
     if (seller?.shopName) return seller.shopName;
@@ -192,7 +151,6 @@ export default function ShopPage({
                 key={ad.id}
                 ad={ad}
                 isFavorite={favIds.has(ad.id)}
-                onFavoriteChange={handleFavoriteChange}
                 onRequireLogin={onRequireLogin}
                 onPlay={onPlay}
                 onOpenDetail={onOpenListing ? (a) => onOpenListing(a.id) : undefined}

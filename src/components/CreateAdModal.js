@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CATEGORIES, CITIES, categoryFirestoreValue } from '../services/categories';
-import { createAd } from '../services/listings';
-import { uploadFile } from '../services/uploads';
+import { useCreateListing } from '../mutations/useCreateListing';
+import { useUploadFiles } from '../mutations/useUpload';
 
 function coercePriceCentsFromInput(value) {
   const raw = String(value ?? '').trim();
@@ -14,6 +14,8 @@ function coercePriceCentsFromInput(value) {
 
 export default function CreateAdModal({ open, onClose, onCreated }) {
   const { t } = useTranslation();
+  const createListing = useCreateListing();
+  const uploadFiles = useUploadFiles();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -21,9 +23,14 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
   const [city, setCity] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [photos, setPhotos] = useState([]);
-  const [busy, setBusy] = useState(false);
-  const [loadingPhase, setLoadingPhase] = useState(null);
   const [error, setError] = useState('');
+
+  const busy = createListing.isPending || uploadFiles.isPending;
+  const loadingPhase = uploadFiles.isPending
+    ? 'uploading'
+    : createListing.isPending
+      ? 'creating'
+      : null;
 
   useEffect(() => {
     if (!open) return;
@@ -35,7 +42,6 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
     setVideoUrl('');
     setPhotos([]);
     setError('');
-    setLoadingPhase(null);
   }, [open]);
 
   useEffect(() => {
@@ -60,17 +66,9 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
       return;
     }
 
-    setBusy(true);
     setError('');
-    setLoadingPhase(photos.length > 0 ? 'uploading' : 'creating');
     try {
-      const imageUrls = [];
-      for (const file of photos) {
-        const url = await uploadFile(file);
-        imageUrls.push(url);
-      }
-
-      setLoadingPhase('creating');
+      const imageUrls = photos.length > 0 ? await uploadFiles.mutateAsync(photos) : [];
 
       const body = {
         title: nextTitle,
@@ -84,14 +82,11 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
         thumbnailUrl: imageUrls[0] || '',
       };
 
-      await createAd(body);
+      await createListing.mutateAsync(body);
       onCreated?.();
       onClose?.();
     } catch (err) {
       setError(String(err?.message || err));
-    } finally {
-      setBusy(false);
-      setLoadingPhase(null);
     }
   }
 

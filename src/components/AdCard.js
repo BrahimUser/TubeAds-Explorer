@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { toggleFavorite } from '../services/favorites';
+import { useToggleFavorite } from '../mutations/useToggleFavorite';
 import { cityLabel } from '../services/categories';
 import { Icon } from './Icons';
 
@@ -118,7 +118,6 @@ function AdCardTextBlock({ ad, compact, isSellerPro, isOwner, onEdit, t, lang })
 export default function AdCard({
   ad,
   isFavorite,
-  onFavoriteChange,
   onRequireLogin,
   onPlay,
   onOpenDetail,
@@ -131,12 +130,14 @@ export default function AdCard({
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'fr';
   const { user } = useAuth();
-  const [heartBusy, setHeartBusy] = useState(false);
+  const toggleFavoriteMutation = useToggleFavorite();
   const [favorited, setFavorited] = useState(!!isFavorite);
 
   useEffect(() => {
     setFavorited(!!isFavorite);
   }, [isFavorite]);
+
+  const heartBusy = toggleFavoriteMutation.isPending;
   const hasVideo = Boolean(ad.youtubeVideoId) || Boolean(ad.videoUrl);
   const isDirectVideo =
     typeof ad.videoUrl === 'string' &&
@@ -154,15 +155,14 @@ export default function AdCard({
     if (heartBusy) return;
     const next = !favorited;
     setFavorited(next);
-    onFavoriteChange?.(ad.id, next);
-    setHeartBusy(true);
     try {
-      await toggleFavorite(ad, favorited);
+      await toggleFavoriteMutation.mutateAsync({
+        ad,
+        currentlyFavorited: favorited,
+        uid: user.uid,
+      });
     } catch {
       setFavorited(!next);
-      onFavoriteChange?.(ad.id, !next);
-    } finally {
-      setHeartBusy(false);
     }
   }
 

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES, CITIES, categoryFirestoreValue } from '../services/categories';
-import { updateAd } from '../services/listings';
-import { uploadFile } from '../services/uploads';
+import { useUpdateListing } from '../mutations/useUpdateListing';
+import { useUploadFiles } from '../mutations/useUpload';
 
 function coercePriceCentsFromInput(value) {
   const raw = String(value ?? '').trim();
@@ -25,6 +25,8 @@ function categoryIdFromStored(stored) {
 export default function EditAdModal({ open, ad, onClose, onSaved }) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const updateListing = useUpdateListing();
+  const uploadFiles = useUploadFiles();
   const isOwner = !!user && !!ad && user.uid === ad.ownerUid;
 
   const initial = useMemo(() => {
@@ -52,9 +54,14 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
   const [videoUrl, setVideoUrl] = useState(initial.videoUrl);
   const [existingImageUrls, setExistingImageUrls] = useState(initial.imageUrls);
   const [newPhotos, setNewPhotos] = useState([]);
-  const [busy, setBusy] = useState(false);
-  const [loadingPhase, setLoadingPhase] = useState(null);
   const [error, setError] = useState('');
+
+  const busy = updateListing.isPending || uploadFiles.isPending;
+  const loadingPhase = uploadFiles.isPending
+    ? 'uploading'
+    : updateListing.isPending
+      ? 'saving'
+      : null;
 
   useEffect(() => {
     setTitle(initial.title);
@@ -66,7 +73,6 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
     setExistingImageUrls(initial.imageUrls);
     setNewPhotos([]);
     setError('');
-    setLoadingPhase(null);
   }, [initial, open]);
 
   useEffect(() => {
@@ -100,17 +106,10 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
       return;
     }
 
-    setBusy(true);
     setError('');
-    setLoadingPhase(newPhotos.length > 0 ? 'uploading' : 'saving');
     try {
-      const uploadedUrls = [];
-      for (const file of newPhotos) {
-        const url = await uploadFile(file);
-        uploadedUrls.push(url);
-      }
-
-      setLoadingPhase('saving');
+      const uploadedUrls =
+        newPhotos.length > 0 ? await uploadFiles.mutateAsync(newPhotos) : [];
       const imageUrls = [...existingImageUrls, ...uploadedUrls];
 
       const patch = {
@@ -124,14 +123,11 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
         thumbnailUrl: imageUrls[0] || '',
         status: 'pending',
       };
-      await updateAd(ad.id, patch);
+      await updateListing.mutateAsync({ adId: ad.id, patch });
       onSaved?.();
       onClose?.();
     } catch (err) {
       setError(String(err?.message || err));
-    } finally {
-      setBusy(false);
-      setLoadingPhase(null);
     }
   }
 

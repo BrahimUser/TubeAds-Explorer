@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './api/queryClient';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoadingProvider } from './context/LoadingContext';
 import Header from './components/Header';
@@ -47,11 +49,13 @@ const LOGIN_RETURN_PATH_KEY = 'marketplace-login-return-path';
 
 export default function App() {
   return (
-    <LoadingProvider>
-      <AuthProvider>
-        <Shell />
-      </AuthProvider>
-    </LoadingProvider>
+    <QueryClientProvider client={queryClient}>
+      <LoadingProvider>
+        <AuthProvider>
+          <Shell />
+        </AuthProvider>
+      </LoadingProvider>
+    </QueryClientProvider>
   );
 }
 
