@@ -2,7 +2,7 @@
  * Marketplace listings grid — `annonces` collection, read-only.
  *
  * Layouts :
- *  • Aperçu accueil  → grille 4 colonnes côté principal + sidebars empilées.
+ *  • Aperçu accueil  → grille 3 colonnes côté principal + sidebars sticky.
  *  • Vue « Voir tout » (page `/listings`) → grille 4 colonnes pleine largeur,
  *    sidebars masquées, pagination (flèches + numéros) en bas.
  */
@@ -26,9 +26,13 @@ import { Icon } from './Icons';
 
 const PAGE_SIZE = 12;
 
-/** Grille uniforme : 1 / 2 / 3 / 4 colonnes selon la largeur. */
+/** Grille pleine page : 1 / 2 / 3 / 4 colonnes selon la largeur. */
 const GRID_CLASS =
   'grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+
+/** Grille accueil (avec sidebar) : 3 colonnes max sur grand écran. */
+const HOME_GRID_CLASS =
+  'grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
 
 export default function RecentListings({
   searchQuery = '',
@@ -144,8 +148,10 @@ export default function RecentListings({
     </div>
   );
 
+  const gridClass = isHomePreview ? HOME_GRID_CLASS : GRID_CLASS;
+
   const renderGrid = () => (
-    <div className={GRID_CLASS}>
+    <div className={gridClass}>
       {visibleAds.map((ad) => (
         <AdCard
           key={ad.id}
@@ -168,7 +174,7 @@ export default function RecentListings({
     (showSectionTitle ? 'py-12 lg:py-14' : 'pb-12 pt-2 lg:pb-14 lg:pt-4');
 
   // ---------------------------------------------------------------------
-  // Aperçu accueil : ads (4 colonnes) à gauche + sidebars empilées à droite
+  // Aperçu accueil : ads (3 colonnes) à gauche + sidebars sticky à droite
   // ---------------------------------------------------------------------
   if (isHomePreview) {
     return (
@@ -176,12 +182,12 @@ export default function RecentListings({
         <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
           <div className="min-w-0 lg:col-span-9">
             {renderHeader()}
-            {status === 'loading' && <SkeletonGrid count={previewLimit} />}
+            {status === 'loading' && <SkeletonGrid count={previewLimit} gridClass={HOME_GRID_CLASS} />}
             {status === 'error' && renderError()}
             {status === 'ready' && filtered.length === 0 && renderEmpty()}
             {status === 'ready' && filtered.length > 0 && renderGrid()}
           </div>
-          <aside className="flex min-w-0 flex-col gap-6 lg:col-span-3">
+          <aside className="flex min-w-0 flex-col gap-6 lg:col-span-3 lg:sticky lg:top-24 lg:self-start">
             <PopularNowSidebar
               ads={publishedAds}
               onPlay={onPlay}
@@ -322,9 +328,9 @@ function Pagination({ page, pageCount, onChange }) {
 // ---------------------------------------------------------------------------
 // Skeleton
 // ---------------------------------------------------------------------------
-function SkeletonGrid({ count = PAGE_SIZE }) {
+function SkeletonGrid({ count = PAGE_SIZE, gridClass = GRID_CLASS }) {
   return (
-    <div className={GRID_CLASS}>
+    <div className={gridClass}>
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}

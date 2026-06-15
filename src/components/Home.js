@@ -7,10 +7,8 @@ import CategoryGrid from './CategoryGrid';
 import RecentListings from './RecentListings';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 
-/** Aperçu accueil : 8 annonces (2 rangées × 4 colonnes) qui s’alignent avec
- *  la pile sidebar (Populaires + Top vendeurs) à droite.
- */
-export const HOME_LISTINGS_PREVIEW = 8;
+/** Aperçu accueil : 15 annonces max (5 rangées × 3 colonnes) + sidebar sticky. */
+export const HOME_LISTINGS_PREVIEW = 15;
 
 export default function Home({
   isHomeMarketplace,

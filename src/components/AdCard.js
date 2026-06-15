@@ -48,7 +48,7 @@ function hasNewBadge(ts) {
   return ms != null && Date.now() - ms < NEW_MS;
 }
 
-function AdCardTextBlock({ ad, compact, isSellerPro, isOwner, onEdit, t, lang }) {
+function AdCardTextBlock({ ad, compact, isSellerPro, isOwner, onEdit, onOpenDetail, t, lang }) {
   return (
     <>
       <div className="flex min-h-[2.25rem] flex-wrap items-start gap-2">
@@ -78,22 +78,41 @@ function AdCardTextBlock({ ad, compact, isSellerPro, isOwner, onEdit, t, lang })
         >
           {formatPrice(ad.priceCents, ad.currency, lang)}
         </div>
-        {isOwner && (
-          <button
-            type="button"
-            className={
-              'shrink-0 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 ' +
-              (compact ? 'px-2.5 py-1' : 'px-3 py-1.5')
-            }
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onEdit?.(ad);
-            }}
-          >
-            {t('card.edit')}
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {onOpenDetail && (
+            <button
+              type="button"
+              className={
+                'inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-200/90 bg-white text-xs font-bold text-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50 ' +
+                (compact ? 'px-3 py-2' : 'px-3 py-2.5')
+              }
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenDetail(ad);
+              }}
+            >
+              <Icon name="search" className="h-3.5 w-3.5 shrink-0 text-brand-600" />
+              {t('card.viewListing')}
+            </button>
+          )}
+          {isOwner && (
+            <button
+              type="button"
+              className={
+                'rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 ' +
+                (compact ? 'px-2.5 py-1' : 'px-3 py-1.5')
+              }
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onEdit?.(ad);
+              }}
+            >
+              {t('card.edit')}
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-medium text-slate-500">
         <span className="flex flex-wrap items-center gap-x-1">
@@ -267,6 +286,7 @@ export default function AdCard({
               isSellerPro={isSellerPro}
               isOwner={isOwner}
               onEdit={onEdit}
+              onOpenDetail={onOpenDetail}
               t={t}
               lang={lang}
             />
@@ -278,6 +298,7 @@ export default function AdCard({
             isSellerPro={isSellerPro}
             isOwner={isOwner}
             onEdit={onEdit}
+            onOpenDetail={onOpenDetail}
             t={t}
             lang={lang}
           />
