@@ -10,6 +10,7 @@ import MessagesDrawer from './components/MessagesDrawer';
 import MyAdsPage from './components/MyAdsPage';
 import VideoPlayerModal from './components/VideoPlayerModal';
 import EditAdModal from './components/EditAdModal';
+import CreateAdModal from './components/CreateAdModal';
 import AdminDashboard from './components/AdminDashboard';
 import ShopPage from './components/ShopPage';
 import ProductDetailPage from './components/ProductDetailPage';
@@ -109,6 +110,7 @@ function Shell() {
   const [messagesThreadId, setMessagesThreadId] = useState(null);
   const [activeAd, setActiveAd] = useState(null);
   const [editingAd, setEditingAd] = useState(null);
+  const [createAdOpen, setCreateAdOpen] = useState(false);
 
   const openMessages = useCallback((threadId) => {
     if (threadId && typeof threadId === 'string') {
@@ -139,6 +141,14 @@ function Shell() {
   }, []);
 
   const requireLogin = useCallback(() => openLoginModal('signin'), [openLoginModal]);
+
+  const openCreateAd = useCallback(() => {
+    if (!user) {
+      requireLogin();
+      return;
+    }
+    setCreateAdOpen(true);
+  }, [user, requireLogin]);
 
   const resetPathToHome = useCallback(() => {
     pushPath('/');
@@ -422,6 +432,7 @@ function Shell() {
             }
             setEditingAd(ad);
           }}
+          onCreateAd={openCreateAd}
           onNavigateHome={resetPathToHome}
           onVisitShop={goShop}
         />
@@ -522,6 +533,7 @@ function Shell() {
               }
               setEditingAd(ad);
             }}
+            onCreateAd={openCreateAd}
           />
         </main>
       )}
@@ -556,6 +568,11 @@ function Shell() {
         ad={editingAd}
         onClose={() => setEditingAd(null)}
         onSaved={() => {}}
+      />
+      <CreateAdModal
+        open={createAdOpen}
+        onClose={() => setCreateAdOpen(false)}
+        onCreated={() => {}}
       />
     </div>
   );

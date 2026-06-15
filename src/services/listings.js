@@ -193,6 +193,14 @@ export async function getAd(adId) {
   return parseAd(listing.id, listing);
 }
 
+export async function createAd(body) {
+  if (!body || typeof body !== 'object') throw new Error('Missing body');
+  const res = await api.post('/listings', body);
+  const { listing } = unwrap(res);
+  if (!listing) throw new Error('Listing not created');
+  return parseAd(listing.id, listing);
+}
+
 export async function updateAd(adId, patch) {
   if (!adId) throw new Error('Missing adId');
   if (!patch || typeof patch !== 'object') throw new Error('Missing patch');

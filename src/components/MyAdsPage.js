@@ -53,7 +53,7 @@ function statusPresentation(status) {
   return { tone: 'bg-slate-400/95 text-white', key: 'myAds.status.default' };
 }
 
-export default function MyAdsPage({ onRequireLogin, onEditAd }) {
+export default function MyAdsPage({ onRequireLogin, onEditAd, onCreateAd }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'fr';
   const { user, ready } = useAuth();
@@ -121,8 +121,15 @@ export default function MyAdsPage({ onRequireLogin, onEditAd }) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-16 pt-2">
-      <header className="mb-8">
+      <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">{t('myAds.pageTitle')}</h1>
+        <button
+          type="button"
+          onClick={() => onCreateAd?.()}
+          className="inline-flex items-center justify-center rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600"
+        >
+          {t('myAds.publish')}
+        </button>
       </header>
 
       {status === 'loading' && <SkeletonGrid />}
@@ -138,6 +145,13 @@ export default function MyAdsPage({ onRequireLogin, onEditAd }) {
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-12 text-center">
           <h2 className="text-base font-semibold text-slate-900">{t('myAds.emptyTitle')}</h2>
           <p className="mt-1 text-sm text-slate-500">{t('myAds.emptyBody')}</p>
+          <button
+            type="button"
+            onClick={() => onCreateAd?.()}
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600"
+          >
+            {t('myAds.publish')}
+          </button>
         </div>
       )}
 

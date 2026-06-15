@@ -155,7 +155,7 @@
     "signedOutBody": "Connectez-vous pour voir et gérer vos annonces.",
     "signIn": "Se connecter",
     "emptyTitle": "Vous n’avez pas encore d’annonce",
-    "emptyBody": "Publiez une annonce depuis l’application mobile — elle apparaîtra ici.",
+    "emptyBody": "Publiez votre première annonce depuis le web — elle apparaîtra ici après validation.",
     "published": "Publié le {{date}}",
     "edit": "Modifier",
     "delete": "Supprimer",
@@ -171,7 +171,35 @@
       "pending": "En attente",
       "rejected": "Refusée",
       "default": "—"
-    }
+    },
+    "publish": "Publier une annonce"
+  },
+  "createAd": {
+    "title": "Publier une annonce",
+    "close": "Fermer",
+    "cancel": "Annuler",
+    "submit": "Publier",
+    "submitting": "Publication…",
+    "uploadingPhotos": "Envoi des photos…",
+    "creatingListing": "Création de l'annonce…",
+    "pleaseWait": "Veuillez patienter, ne fermez pas cette fenêtre.",
+    "pendingHint": "Votre annonce sera examinée avant d'apparaître sur le marché public.",
+    "titleRequired": "Le titre est obligatoire.",
+    "fieldTitle": "Titre",
+    "fieldTitlePlaceholder": "Ex. iPhone 14 Pro Max",
+    "fieldDescription": "Description",
+    "fieldDescriptionPlaceholder": "Décrivez votre article…",
+    "fieldPrice": "Prix (MAD)",
+    "fieldCategory": "Catégorie",
+    "fieldCategoryPlaceholder": "Choisir…",
+    "fieldCity": "Ville",
+    "fieldCityPlaceholder": "Choisir…",
+    "fieldPhotos": "Photos",
+    "photosSelected": "{{count}} photo(s) sélectionnée(s)",
+    "fieldVideo": "URL vidéo (optionnel)"
+  },
+  "shop": {
+    "publishListing": "Publier une annonce"
   },
   "adminModeration": {
     "checkingAccess": "Vérification de l’accès…",

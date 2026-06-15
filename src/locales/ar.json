@@ -155,7 +155,8 @@
     "signedOutBody": "سجّل الدخول لعرض إعلاناتك وإدارتها.",
     "signIn": "تسجيل الدخول",
     "emptyTitle": "لا توجد إعلانات بعد",
-    "emptyBody": "انشر إعلانًا من تطبيق الجوال — سيظهر هنا.",
+    "emptyBody": "انشر إعلانك الأول من الويب — سيظهر هنا بعد المراجعة.",
+    "publish": "نشر إعلان",
     "published": "تاريخ النشر: {{date}}",
     "edit": "تعديل",
     "delete": "حذف",
@@ -172,6 +173,33 @@
       "rejected": "مرفوض",
       "default": "—"
     }
+  },
+  "createAd": {
+    "title": "نشر إعلان",
+    "close": "إغلاق",
+    "cancel": "إلغاء",
+    "submit": "نشر",
+    "submitting": "جارٍ النشر…",
+    "uploadingPhotos": "جارٍ رفع الصور…",
+    "creatingListing": "جارٍ إنشاء الإعلان…",
+    "pleaseWait": "يرجى الانتظار — لا تغلق هذه النافذة.",
+    "pendingHint": "سيتم مراجعة إعلانك قبل ظهوره في السوق العام.",
+    "titleRequired": "العنوان مطلوب.",
+    "fieldTitle": "العنوان",
+    "fieldTitlePlaceholder": "مثال: iPhone 14 Pro Max",
+    "fieldDescription": "الوصف",
+    "fieldDescriptionPlaceholder": "صف المنتج…",
+    "fieldPrice": "السعر (درهم)",
+    "fieldCategory": "الفئة",
+    "fieldCategoryPlaceholder": "اختر…",
+    "fieldCity": "المدينة",
+    "fieldCityPlaceholder": "اختر…",
+    "fieldPhotos": "الصور",
+    "photosSelected": "{{count}} صورة محددة",
+    "fieldVideo": "رابط الفيديو (اختياري)"
+  },
+  "shop": {
+    "publishListing": "نشر إعلان"
   },
   "adminModeration": {
     "checkingAccess": "جارٍ التحقق من الصلاحيات…",

@@ -216,11 +216,15 @@ export default function AdCard({
             </span>
           )}
 
-          {hasNewBadge(ad.createdAt) && (
+          {isOwner && String(ad.status ?? '').toLowerCase() === 'pending' ? (
+            <span className="absolute start-2.5 top-2.5 rounded-md bg-amber-500 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white shadow">
+              {t('myAds.status.pending')}
+            </span>
+          ) : hasNewBadge(ad.createdAt) ? (
             <span className="absolute start-2.5 top-2.5 rounded-md bg-brand-500 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white shadow">
               {t('card.new')}
             </span>
-          )}
+          ) : null}
         </div>
       </button>
 

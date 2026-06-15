@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { subscribeUser } from '../services/users';
 import { adIsVisibleOnPublicHome, listenListingsByOwner } from '../services/listings';
@@ -7,21 +8,36 @@ import { pushPath } from '../utils/routing';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import AdCard from './AdCard';
 
+function isVisibleOnShop(ad, isOwnShop) {
+  const s = String(ad?.status ?? '').toLowerCase();
+  if (isOwnShop) return s === 'approved' || s === 'pending';
+  return adIsVisibleOnPublicHome(ad);
+}
+
 export default function ShopPage({
   sellerId,
   onRequireLogin,
   onPlay,
   onOpenListing,
   onEdit,
+  onCreateAd,
   onNavigateHome,
   onVisitShop,
 }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [seller, setSeller] = useState(null);
-  const [ads, setAds] = useState([]);
+  const [allAds, setAllAds] = useState([]);
   const [status, setStatus] = useState('loading');
   const [loadErr, setLoadErr] = useState(null);
   const [favIds, setFavIds] = useState(() => new Set());
+
+  const isOwnShop = !!user?.uid && user.uid === sellerId;
+
+  const ads = useMemo(
+    () => allAds.filter((ad) => isVisibleOnShop(ad, isOwnShop)),
+    [allAds, isOwnShop],
+  );
 
   useEffect(() => {
     if (!sellerId) return undefined;
@@ -37,8 +53,7 @@ export default function ShopPage({
     const off = listenListingsByOwner(
       sellerId,
       (items) => {
-        const pub = items.filter(adIsVisibleOnPublicHome);
-        setAds(pub);
+        setAllAds(items);
         setStatus('ready');
         setLoadErr(null);
       },
@@ -102,6 +117,15 @@ export default function ShopPage({
                   Pro
                 </span>
               )}
+              {isOwnShop && (
+                <button
+                  type="button"
+                  onClick={() => onCreateAd?.()}
+                  className="rounded-full bg-brand-500 px-4 py-1.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-brand-600"
+                >
+                  {t('shop.publishListing')}
+                </button>
+              )}
             </div>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
               {seller?.shopDescription ||
@@ -148,7 +172,16 @@ export default function ShopPage({
 
         {status === 'ready' && ads.length === 0 && (
           <div className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center text-slate-600">
-            Aucune annonce publiée pour le moment.
+            <p>Aucune annonce publiée pour le moment.</p>
+            {isOwnShop && (
+              <button
+                type="button"
+                onClick={() => onCreateAd?.()}
+                className="mt-6 inline-flex items-center justify-center rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600"
+              >
+                {t('shop.publishListing')}
+              </button>
+            )}
           </div>
         )}
 

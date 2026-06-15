@@ -155,7 +155,8 @@
     "signedOutBody": "Sign in to view and manage your listings.",
     "signIn": "Sign in",
     "emptyTitle": "You don’t have any listings yet",
-    "emptyBody": "Publish a listing from the mobile app — it will show up here.",
+    "emptyBody": "Publish your first listing from the web — it will appear here after review.",
+    "publish": "Publish a listing",
     "published": "Published on {{date}}",
     "edit": "Edit",
     "delete": "Delete",
@@ -172,6 +173,33 @@
       "rejected": "Rejected",
       "default": "—"
     }
+  },
+  "createAd": {
+    "title": "Publish a listing",
+    "close": "Close",
+    "cancel": "Cancel",
+    "submit": "Publish",
+    "submitting": "Publishing…",
+    "uploadingPhotos": "Uploading photos…",
+    "creatingListing": "Creating listing…",
+    "pleaseWait": "Please wait — do not close this window.",
+    "pendingHint": "Your listing will be reviewed before it appears on the public marketplace.",
+    "titleRequired": "Title is required.",
+    "fieldTitle": "Title",
+    "fieldTitlePlaceholder": "e.g. iPhone 14 Pro Max",
+    "fieldDescription": "Description",
+    "fieldDescriptionPlaceholder": "Describe your item…",
+    "fieldPrice": "Price (MAD)",
+    "fieldCategory": "Category",
+    "fieldCategoryPlaceholder": "Select…",
+    "fieldCity": "City",
+    "fieldCityPlaceholder": "Select…",
+    "fieldPhotos": "Photos",
+    "photosSelected": "{{count}} photo(s) selected",
+    "fieldVideo": "Video URL (optional)"
+  },
+  "shop": {
+    "publishListing": "Publish a listing"
   },
   "adminModeration": {
     "checkingAccess": "Checking access…",
