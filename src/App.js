@@ -35,8 +35,10 @@ import {
   ADMIN_DASHBOARD_PATH,
   LISTINGS_PAGE_PATH,
   SELLERS_PAGE_PATH,
+  MY_ADS_PAGE_PATH,
   isListingsPagePath,
   isSellersPagePath,
+  isMyAdsPagePath,
 } from './utils/routing';
 
 const LISTING_PDP_RETURN_KEY = 'marketplace-listing-pdp-return';
@@ -261,6 +263,8 @@ function Shell() {
       setPage('listings');
     } else if (matchFooterInfoPath(path)) {
       setPage('listings');
+    } else if (isMyAdsPagePath(path)) {
+      setPage('listings');
     }
     window.scrollTo(0, 0);
   }, []);
@@ -295,6 +299,7 @@ function Shell() {
       matchListingPath(pathname) ||
       matchCheckoutPath(pathname) ||
       isSellersPagePath(pathname) ||
+      isMyAdsPagePath(pathname) ||
       matchFooterInfoPath(pathname)
     ) {
       resetPathToHome();
@@ -314,7 +319,8 @@ function Shell() {
         requireLogin();
         return;
       }
-      setPage('myads');
+      pushPath(MY_ADS_PAGE_PATH);
+      setPathname(normalizePathname(MY_ADS_PAGE_PATH));
       setNavId('myads');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -354,6 +360,7 @@ function Shell() {
   const checkoutMatch = matchCheckoutPath(pathname);
   const checkoutRoute = !!checkoutMatch?.listingId;
   const sellersRoute = isSellersPagePath(pathname);
+  const myAdsRoute = isMyAdsPagePath(pathname);
   const footerInfoPath = matchFooterInfoPath(pathname);
   const footerInfoRoute = !!footerInfoPath;
   const isListings = page === 'listings';
@@ -364,6 +371,7 @@ function Shell() {
     !listingRoute &&
     !checkoutRoute &&
     !sellersRoute &&
+    !myAdsRoute &&
     !footerInfoRoute &&
     isListings &&
     pathNorm === '/';
@@ -373,6 +381,7 @@ function Shell() {
     !listingRoute &&
     !checkoutRoute &&
     !sellersRoute &&
+    !myAdsRoute &&
     !footerInfoRoute &&
     isListings &&
     isListingsPagePath(pathname);
@@ -383,6 +392,7 @@ function Shell() {
     listingRoute ||
     checkoutRoute ||
     sellersRoute ||
+    myAdsRoute ||
     footerInfoRoute
       ? ''
       : isListingsStandalone
@@ -485,6 +495,7 @@ function Shell() {
         !listingRoute &&
         !checkoutRoute &&
         !sellersRoute &&
+        !myAdsRoute &&
         !footerInfoRoute &&
         isListings && (
         <main>
@@ -522,7 +533,7 @@ function Shell() {
         !checkoutRoute &&
         !sellersRoute &&
         !footerInfoRoute &&
-        !isListings && (
+        myAdsRoute && (
         <main className="min-h-screen pt-4">
           <MyAdsPage
             onRequireLogin={requireLogin}

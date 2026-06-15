@@ -12,12 +12,18 @@ export const LISTINGS_PAGE_PATH = '/listings';
 
 export const SELLERS_PAGE_PATH = '/sellers';
 
+export const MY_ADS_PAGE_PATH = '/my-ads';
+
 export function isListingsPagePath(pathname) {
   return normalizePathname(pathname) === LISTINGS_PAGE_PATH;
 }
 
 export function isSellersPagePath(pathname) {
   return normalizePathname(pathname) === SELLERS_PAGE_PATH;
+}
+
+export function isMyAdsPagePath(pathname) {
+  return normalizePathname(pathname) === MY_ADS_PAGE_PATH;
 }
 
 export function isAdminDashboardPath(pathname) {
