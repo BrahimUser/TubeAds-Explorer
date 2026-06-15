@@ -34,6 +34,14 @@ export function mapListing(listing) {
     imageUrls,
     ownerUid: listing.ownerId,
     ownerId: listing.ownerId,
+    owner: listing.owner
+      ? {
+          displayName: listing.owner.displayName,
+          shopName: listing.owner.shopName,
+          phoneNumber: listing.owner.phoneNumber,
+          isPro: listing.owner.isPro,
+        }
+      : null,
     status: listing.status.toLowerCase(),
     viewCount: listing.viewCount,
     createdAt: listing.createdAt,

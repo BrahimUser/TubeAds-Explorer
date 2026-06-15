@@ -5,15 +5,10 @@ import useIsAdmin from '../hooks/useIsAdmin';
 import { approveListing, listenPendingAds, rejectListing } from '../services/listings';
 import { pushPath } from '../utils/routing';
 import AdminModerationCard from './AdminModerationCard';
+import AdminModerationConfirmDialog from './AdminModerationConfirmDialog';
+import AdminToast from './AdminToast';
+import { Icon } from './Icons';
 import VideoPlayerModal from './VideoPlayerModal';
-
-function badge(text, tone) {
-  const cls =
-    tone === 'orange'
-      ? 'bg-orange-50 text-orange-900 ring-orange-100'
-      : 'bg-slate-50 text-slate-700 ring-slate-200';
-  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ${cls}`}>{text}</span>;
-}
 
 export default function AdminDashboard({ onRequireLogin, onNavigateHome }) {
   const { t } = useTranslation();
@@ -23,6 +18,8 @@ export default function AdminDashboard({ onRequireLogin, onNavigateHome }) {
   const [busy, setBusy] = useState(() => new Map());
   const [error, setError] = useState(null);
   const [videoAd, setVideoAd] = useState(null);
+  const [confirm, setConfirm] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     if (!user || !ready || !isAdmin) {
@@ -39,15 +36,28 @@ export default function AdminDashboard({ onRequireLogin, onNavigateHome }) {
     return unsub;
   }, [user, ready, isAdmin]);
 
-  async function runAction(adId, kind) {
+  async function runAction(ad, kind) {
+    const adId = ad?.id;
+    if (!adId) return false;
     const key = `${adId}:${kind}`;
     setBusy((prev) => new Map(prev).set(key, true));
     setError(null);
     try {
       if (kind === 'approve') await approveListing(adId);
       else await rejectListing(adId);
+      setToast({
+        tone: 'success',
+        message:
+          kind === 'approve'
+            ? t('adminModeration.approvedSuccess', { title: ad.title || t('common.untitled') })
+            : t('adminModeration.rejectedSuccess', { title: ad.title || t('common.untitled') }),
+      });
+      return true;
     } catch (e) {
-      setError(String(e?.message || e));
+      const message = String(e?.message || e);
+      setError(message);
+      setToast({ tone: 'error', message });
+      return false;
     } finally {
       setBusy((prev) => {
         const n = new Map(prev);
@@ -57,10 +67,23 @@ export default function AdminDashboard({ onRequireLogin, onNavigateHome }) {
     }
   }
 
+  function requestAction(ad, kind) {
+    setConfirm({ ad, kind });
+  }
+
+  async function handleConfirm() {
+    if (!confirm?.ad) return;
+    const ok = await runAction(confirm.ad, confirm.kind);
+    if (ok) setConfirm(null);
+  }
+
   if (!ready) {
     return (
-      <div className="mx-auto max-w-[900px] px-4 py-10">
-        <div className="text-sm font-semibold text-slate-700">{t('adminModeration.checkingAccess')}</div>
+      <div className="mx-auto max-w-[1100px] px-4 py-10">
+        <div className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-500" />
+          {t('adminModeration.checkingAccess')}
+        </div>
       </div>
     );
   }
@@ -85,41 +108,69 @@ export default function AdminDashboard({ onRequireLogin, onNavigateHome }) {
   if (!isAdmin) {
     return (
       <div className="mx-auto max-w-[900px] space-y-4 px-4 py-10">
-        <h1 className="text-xl font-extrabold text-slate-900">{t('adminModeration.forbiddenTitle')}</h1>
-        <p className="text-sm text-slate-600">{t('adminModeration.forbiddenBody')}</p>
+        <div className="flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-red-50 text-red-600 ring-1 ring-red-100">
+            <Icon name="shield" className="h-5 w-5" />
+          </span>
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-900">{t('adminModeration.forbiddenTitle')}</h1>
+            <p className="mt-1 text-sm text-slate-600">{t('adminModeration.forbiddenBody')}</p>
+          </div>
+        </div>
         <HomeLink onNavigateHome={onNavigateHome} />
       </div>
     );
   }
 
+  const confirmBusy = confirm ? busy.has(`${confirm.ad.id}:${confirm.kind}`) : false;
+
   return (
-    <div className="mx-auto max-w-[1100px] px-4 py-10">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-extrabold tracking-tight text-slate-900">{t('adminModeration.title')}</h1>
-            {badge(t('adminModeration.badgeHidden'), 'orange')}
+    <div className="mx-auto max-w-[1100px] px-4 py-8 sm:py-10">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+              <Icon name="shield" className="h-5 w-5" />
+            </span>
+            <div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">{t('adminModeration.title')}</h1>
+              <p className="mt-1 max-w-2xl text-sm text-slate-600">{t('adminModeration.subtitle')}</p>
+            </div>
           </div>
-          <p className="text-sm text-slate-600">{t('adminModeration.subtitle')}</p>
         </div>
         <HomeLink onNavigateHome={onNavigateHome} />
       </div>
 
+      <div className="mt-6 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+        <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-orange-50 px-5 py-4 shadow-sm">
+          <div className="text-[11px] font-extrabold uppercase tracking-wide text-amber-800/80">
+            {t('adminModeration.queueLabel')}
+          </div>
+          <div className="mt-1 flex flex-wrap items-end gap-3">
+            <div className="text-3xl font-extrabold tabular-nums text-amber-950">{items.length}</div>
+            <div className="pb-1 text-sm font-semibold text-amber-900/80">
+              {t('adminModeration.pendingCount', { count: items.length })}
+            </div>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-amber-900/70">{t('adminModeration.queueHint')}</p>
+        </div>
+      </div>
+
       {error && (
-        <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-          {error}
+        <div className="mt-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+          <Icon name="close" className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      <div className="mt-8 space-y-4">
-        <div className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
-          {t('adminModeration.pendingCount', { count: items.length })}
-        </div>
-
+      <div className="mt-8 space-y-5">
         {items.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-10 text-center text-sm text-slate-600 shadow-sm">
-            {t('adminModeration.emptyQueue')}
-            <div className="mt-2 text-xs text-slate-500">{t('adminModeration.emptyHint')}</div>
+          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-14 text-center shadow-sm">
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+              <Icon name="check" className="h-7 w-7" />
+            </div>
+            <p className="mt-4 text-sm font-semibold text-slate-800">{t('adminModeration.emptyQueue')}</p>
+            <p className="mt-2 text-xs text-slate-500">{t('adminModeration.emptyHint')}</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -134,8 +185,8 @@ export default function AdminDashboard({ onRequireLogin, onNavigateHome }) {
                   busyApprove={busyApprove}
                   busyReject={busyReject}
                   locked={locked}
-                  onApprove={() => runAction(ad.id, 'approve')}
-                  onReject={() => runAction(ad.id, 'reject')}
+                  onApprove={() => requestAction(ad, 'approve')}
+                  onReject={() => requestAction(ad, 'reject')}
                   onPlayVideo={setVideoAd}
                 />
               );
@@ -144,6 +195,18 @@ export default function AdminDashboard({ onRequireLogin, onNavigateHome }) {
         )}
       </div>
 
+      <AdminModerationConfirmDialog
+        open={!!confirm}
+        kind={confirm?.kind}
+        adTitle={confirm?.ad?.title}
+        busy={confirmBusy}
+        onConfirm={handleConfirm}
+        onCancel={() => {
+          if (!confirmBusy) setConfirm(null);
+        }}
+      />
+
+      <AdminToast message={toast?.message} tone={toast?.tone} onDismiss={() => setToast(null)} />
       <VideoPlayerModal open={!!videoAd} ad={videoAd} onClose={() => setVideoAd(null)} />
     </div>
   );
@@ -154,12 +217,13 @@ function HomeLink({ onNavigateHome }) {
   return (
     <button
       type="button"
-      className="text-sm font-bold text-brand-600 hover:underline"
+      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
       onClick={() => {
         pushPath('/');
         onNavigateHome?.();
       }}
     >
+      <span aria-hidden="true">←</span>
       {t('adminModeration.backMarketplace')}
     </button>
   );

@@ -1,6 +1,17 @@
 import prisma from '../config/prisma.js';
 
-const listingInclude = { images: { orderBy: { sortOrder: 'asc' } } };
+const listingInclude = {
+  images: { orderBy: { sortOrder: 'asc' } },
+  owner: {
+    select: {
+      id: true,
+      displayName: true,
+      shopName: true,
+      phoneNumber: true,
+      isPro: true,
+    },
+  },
+};
 
 export const listingRepository = {
   findMany({ where, skip, take, orderBy }) {

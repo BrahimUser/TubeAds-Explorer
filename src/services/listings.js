@@ -115,6 +115,14 @@ export function parseAd(id, raw) {
     thumbnailUrl,
     imageUrls,
     ownerUid: String(raw.ownerUid ?? raw.ownerId ?? raw.owner_uid ?? ''),
+    owner: raw.owner && typeof raw.owner === 'object'
+      ? {
+          displayName: String(raw.owner.displayName ?? ''),
+          shopName: String(raw.owner.shopName ?? ''),
+          phoneNumber: String(raw.owner.phoneNumber ?? ''),
+          isPro: Boolean(raw.owner.isPro),
+        }
+      : null,
     status: raw.status ?? 'active',
     createdAt: raw.createdAt ?? raw.created_at ?? null,
     viewCount: typeof raw.viewCount === 'number' ? raw.viewCount : null,
