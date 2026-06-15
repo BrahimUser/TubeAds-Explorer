@@ -150,6 +150,10 @@ export default function RecentListings({
 
   const gridClass = isHomePreview ? HOME_GRID_CLASS : GRID_CLASS;
 
+  const playWithPlaylist = isHomePreview
+    ? (ad) => onPlay?.(ad, visibleAds)
+    : onPlay;
+
   const renderGrid = () => (
     <div className={gridClass}>
       {visibleAds.map((ad) => (
@@ -158,7 +162,7 @@ export default function RecentListings({
           ad={ad}
           isFavorite={favIds.has(ad.id)}
           onRequireLogin={onRequireLogin}
-          onPlay={onPlay}
+          onPlay={playWithPlaylist}
           onOpenDetail={onOpenListing ? (a) => onOpenListing(a.id) : undefined}
           onEdit={onEdit}
           sellerProfile={sellerProfiles[ad.ownerUid]}
@@ -190,7 +194,7 @@ export default function RecentListings({
           <aside className="flex min-w-0 flex-col gap-6 lg:col-span-3 lg:sticky lg:top-24 lg:self-start">
             <PopularNowSidebar
               ads={publishedAds}
-              onPlay={onPlay}
+              onPlay={playWithPlaylist}
               onViewAll={onViewAll}
             />
             <TopSellersSidebar

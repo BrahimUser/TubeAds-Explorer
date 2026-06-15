@@ -79,6 +79,11 @@
     "timeDaysAgo": "Il y a {{days}} j",
     "timeWeeksAgo": "Il y a {{weeks}} sem."
   },
+  "videoPlayer": {
+    "previousListing": "Annonce précédente",
+    "nextListing": "Annonce suivante",
+    "position": "{{current}} / {{total}}"
+  },
   "footer": {
     "description": "La façon la plus simple d'acheter et de vendre en toute confiance, partout au Maroc.",
     "about": "À propos",

@@ -79,6 +79,11 @@
     "timeDaysAgo": "منذ {{days}} يوم",
     "timeWeeksAgo": "منذ {{weeks}} أسبوع"
   },
+  "videoPlayer": {
+    "previousListing": "الإعلان السابق",
+    "nextListing": "الإعلان التالي",
+    "position": "{{current}} / {{total}}"
+  },
   "footer": {
     "description": "أسهل طريقة للشراء والبيع بكل ثقة في جميع أنحاء المغرب.",
     "about": "حول",

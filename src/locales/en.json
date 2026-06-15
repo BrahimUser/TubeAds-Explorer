@@ -79,6 +79,11 @@
     "timeDaysAgo": "{{days}} d ago",
     "timeWeeksAgo": "{{weeks}} wk ago"
   },
+  "videoPlayer": {
+    "previousListing": "Previous listing",
+    "nextListing": "Next listing",
+    "position": "{{current}} / {{total}}"
+  },
   "footer": {
     "description": "The easiest way to buy and sell with confidence, anywhere in Morocco.",
     "about": "About",

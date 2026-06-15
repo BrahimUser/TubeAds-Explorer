@@ -120,9 +120,24 @@ function Shell() {
   const [loginAuthIntent, setLoginAuthIntent] = useState('signin');
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [messagesThreadId, setMessagesThreadId] = useState(null);
-  const [activeAd, setActiveAd] = useState(null);
+  const [videoSession, setVideoSession] = useState(null);
   const [editingAd, setEditingAd] = useState(null);
   const [createAdOpen, setCreateAdOpen] = useState(false);
+
+  const openVideoPlayer = useCallback((ad, playlist) => {
+    if (!ad) return;
+    const list = Array.isArray(playlist) && playlist.length > 0 ? playlist : [ad];
+    const index = Math.max(0, list.findIndex((a) => a.id === ad.id));
+    setVideoSession({ ad: list[index] ?? ad, playlist: list, index });
+  }, []);
+
+  const setVideoIndex = useCallback((index) => {
+    setVideoSession((s) => {
+      if (!s?.playlist?.length) return s;
+      const next = ((index % s.playlist.length) + s.playlist.length) % s.playlist.length;
+      return { ...s, index: next, ad: s.playlist[next] };
+    });
+  }, []);
 
   const openMessages = useCallback((threadId) => {
     if (threadId && typeof threadId === 'string') {
@@ -462,7 +477,7 @@ function Shell() {
         <ShopPage
           sellerId={shopMatch.userId}
           onRequireLogin={requireLogin}
-          onPlay={(ad) => setActiveAd(ad)}
+          onPlay={openVideoPlayer}
           onOpenListing={goListingDetail}
           onEdit={(ad) => {
             if (!user) {
@@ -486,7 +501,7 @@ function Shell() {
         <ProductDetailPage
           listingId={listingMatch.listingId}
           onBack={closeListingDetail}
-          onPlay={(ad) => setActiveAd(ad)}
+          onPlay={openVideoPlayer}
           onVisitShop={goShop}
           onRequireLogin={requireLogin}
           onOpenMessages={(threadId) => openMessages(threadId)}
@@ -540,7 +555,7 @@ function Shell() {
             onCityChange={setCityFilter}
             onHeroSearchSubmit={() => scrollToId('listings')}
             onRequireLogin={requireLogin}
-            onPlay={(ad) => setActiveAd(ad)}
+            onPlay={openVideoPlayer}
             onOpenListing={goListingDetail}
             onEditAd={(ad) => {
               if (!user) {
@@ -619,7 +634,14 @@ function Shell() {
         initialThreadId={messagesThreadId}
         onRequireLogin={requireLogin}
       />
-      <VideoPlayerModal open={!!activeAd} ad={activeAd} onClose={() => setActiveAd(null)} />
+      <VideoPlayerModal
+        open={!!videoSession}
+        ad={videoSession?.ad}
+        playlist={videoSession?.playlist}
+        currentIndex={videoSession?.index ?? 0}
+        onChangeIndex={setVideoIndex}
+        onClose={() => setVideoSession(null)}
+      />
       <EditAdModal
         open={!!editingAd}
         ad={editingAd}
