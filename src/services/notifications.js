@@ -1,4 +1,4 @@
-import api, { getAccessToken, unwrap } from '../api/client';
+import api, { getAccessToken, silentRequest, unwrap } from '../api/client';
 import { createPoller } from '../hooks/usePolling';
 
 export function buildSenderName(user) {
@@ -23,7 +23,7 @@ export function listenUnreadNotificationsCount(uid, onCount, onError) {
   return createPoller(
     async () => {
       if (!getAccessToken()) return 0;
-      const res = await api.get('/notifications/unread-count');
+      const res = await api.get('/notifications/unread-count', silentRequest);
       const data = unwrap(res);
       return data.count || 0;
     },
@@ -40,7 +40,7 @@ export function listenRecentNotifications(uid, onChange, onError) {
   }
   return createPoller(
     async () => {
-      const res = await api.get('/notifications');
+      const res = await api.get('/notifications', silentRequest);
       const { notifications } = unwrap(res);
       return notifications || [];
     },

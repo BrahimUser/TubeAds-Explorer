@@ -1,5 +1,5 @@
 // Orders via Express API (replaces Firestore `orders` collection).
-import api, { getAccessToken, unwrap } from '../api/client';
+import api, { getAccessToken, silentRequest, unwrap } from '../api/client';
 import { createPoller } from '../hooks/usePolling';
 
 const STATUS_FALLBACK = {
@@ -83,7 +83,7 @@ export function listenSellerOrders(uid, onChange, onError) {
   }
   return createPoller(
     async () => {
-      const res = await api.get('/orders', { params: { role: 'seller' } });
+      const res = await api.get('/orders', { ...silentRequest, params: { role: 'seller' } });
       const { orders } = unwrap(res);
       return (orders || []).map((o) => parseOrder(o.id, o));
     },
@@ -100,7 +100,7 @@ export function listenBuyerOrders(uid, onChange, onError) {
   }
   return createPoller(
     async () => {
-      const res = await api.get('/orders', { params: { role: 'buyer' } });
+      const res = await api.get('/orders', { ...silentRequest, params: { role: 'buyer' } });
       const { orders } = unwrap(res);
       return (orders || []).map((o) => parseOrder(o.id, o));
     },

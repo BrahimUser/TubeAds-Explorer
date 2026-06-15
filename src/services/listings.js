@@ -1,5 +1,5 @@
 // Marketplace listings — Express API (replaces Firestore `listings` collection).
-import api, { unwrap } from '../api/client';
+import api, { silentRequest, unwrap } from '../api/client';
 import { createPoller } from '../hooks/usePolling';
 import { categoryFirestoreValue } from './categories';
 
@@ -138,7 +138,7 @@ function timestampMs(ts) {
 }
 
 async function fetchListings(params) {
-  const res = await api.get('/listings', { params });
+  const res = await api.get('/listings', { ...silentRequest, params });
   const { items } = unwrap(res);
   return (items || []).map((d) => parseAd(d.id, d));
 }

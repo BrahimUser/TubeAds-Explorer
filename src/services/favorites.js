@@ -1,5 +1,5 @@
 // Per-user favorites via Express API.
-import api, { getAccessToken, unwrap } from '../api/client';
+import api, { getAccessToken, silentRequest, unwrap } from '../api/client';
 import { createPoller } from '../hooks/usePolling';
 
 export async function addFavorite(ad) {
@@ -27,7 +27,7 @@ export function listenFavoriteIds(uid, onChange, onError) {
   }
   return createPoller(
     async () => {
-      const res = await api.get('/favorites');
+      const res = await api.get('/favorites', silentRequest);
       const data = unwrap(res);
       const ids = data.ids || (data.favorites || []).map((f) => f.listingId || f.adId);
       return new Set(ids);

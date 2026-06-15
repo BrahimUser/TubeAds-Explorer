@@ -1,7 +1,7 @@
 /**
  * User profiles via Express API.
  */
-import api, { unwrap } from '../api/client';
+import api, { silentRequest, unwrap } from '../api/client';
 import { createPoller } from '../hooks/usePolling';
 
 export const USERS_COLLECTION = 'users';
@@ -43,12 +43,12 @@ export async function ensureUserProfileFromPhoneAuth(user) {
   return user;
 }
 
-export async function fetchUser(uid) {
+export async function fetchUser(uid, requestConfig) {
   const cached = userProfileCache.get(uid);
   if (cached && Date.now() - cached.at < USER_PROFILE_CACHE_MS) {
     return cached.profile;
   }
-  const res = await api.get(`/users/${uid}`);
+  const res = await api.get(`/users/${uid}`, requestConfig);
   const { user } = unwrap(res);
   const profile = normalizeUserProfile(uid, user);
   userProfileCache.set(uid, { profile, at: Date.now() });
@@ -62,7 +62,7 @@ export function subscribeUser(uid, onChange, onError) {
     return () => {};
   }
   return createPoller(
-    () => fetchUser(uid),
+    () => fetchUser(uid, silentRequest),
     onChange,
     onError,
     10000,

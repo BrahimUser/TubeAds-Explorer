@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoadingProvider } from './context/LoadingContext';
 import Header from './components/Header';
 import Home, { HOME_LISTINGS_PREVIEW } from './components/Home';
 import Footer from './components/Footer';
@@ -46,9 +47,11 @@ const LOGIN_RETURN_PATH_KEY = 'marketplace-login-return-path';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Shell />
-    </AuthProvider>
+    <LoadingProvider>
+      <AuthProvider>
+        <Shell />
+      </AuthProvider>
+    </LoadingProvider>
   );
 }
 
