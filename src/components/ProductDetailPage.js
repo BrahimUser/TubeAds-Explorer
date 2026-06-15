@@ -158,6 +158,33 @@ export default function ProductDetailPage({
     setActiveIndex((i) => (images.length ? (i + 1) % images.length : 0));
   }, [images.length]);
 
+  const canNavigateImages = images.length > 1;
+
+  useEffect(() => {
+    if (!canNavigateImages) return undefined;
+    function onKey(e) {
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT')
+      ) {
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goPrev();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goNext();
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [canNavigateImages, goPrev, goNext]);
+
   const mainSrc = images[activeIndex] || '';
 
   if (status === 'loading') {

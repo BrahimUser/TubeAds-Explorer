@@ -219,6 +219,7 @@
     "fieldCity": "المدينة",
     "fieldCityPlaceholder": "اختر…",
     "fieldPhotos": "الصور",
+    "choosePhotos": "اختر صورًا",
     "photosSelected": "{{count}} صورة محددة",
     "fieldVideo": "رابط الفيديو (اختياري)"
   },

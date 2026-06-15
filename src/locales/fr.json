@@ -219,6 +219,7 @@
     "fieldCity": "Ville",
     "fieldCityPlaceholder": "Choisir…",
     "fieldPhotos": "Photos",
+    "choosePhotos": "Choisir des photos",
     "photosSelected": "{{count}} photo(s) sélectionnée(s)",
     "fieldVideo": "URL vidéo (optionnel)"
   },

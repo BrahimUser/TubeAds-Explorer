@@ -12,6 +12,16 @@ function coercePriceCentsFromInput(value) {
   return Math.max(0, Math.round(n * 100));
 }
 
+function fileKey(file) {
+  return `${file.name}-${file.size}-${file.lastModified}`;
+}
+
+function appendUniqueFiles(prev, incoming) {
+  const existing = new Set(prev.map(fileKey));
+  const toAdd = incoming.filter((file) => !existing.has(fileKey(file)));
+  return [...prev, ...toAdd];
+}
+
 export default function CreateAdModal({ open, onClose, onCreated }) {
   const { t } = useTranslation();
   const createListing = useCreateListing();
@@ -53,9 +63,25 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, onClose, busy]);
 
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
+
+  useEffect(() => {
+    const urls = photos.map((file) => URL.createObjectURL(file));
+    setPhotoPreviewUrls(urls);
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [photos]);
+
   function handlePhotosChange(e) {
     const files = Array.from(e.target.files || []);
-    setPhotos(files);
+    if (files.length === 0) return;
+    setPhotos((prev) => appendUniqueFiles(prev, files));
+    e.target.value = '';
+  }
+
+  function removePhoto(index) {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function onSubmit(e) {
@@ -208,22 +234,49 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
             </label>
           </div>
 
-          <label className="block">
+          <div className="block">
             <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldPhotos')}</div>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              multiple
-              disabled={busy}
-              onChange={handlePhotosChange}
-              className="mt-1 w-full text-sm text-slate-600 file:me-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-700"
-            />
+            {photos.length > 0 && (
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {photos.map((file, index) => (
+                  <li key={fileKey(file)} className="relative">
+                    <img
+                      src={photoPreviewUrls[index]}
+                      alt=""
+                      className="h-16 w-16 rounded-lg border border-slate-200 object-cover"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => removePhoto(index)}
+                      className="absolute -end-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow"
+                      aria-label={t('editAd.removePhoto')}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <label
+              className={`mt-2 inline-flex cursor-pointer rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 ${busy ? 'pointer-events-none opacity-60' : ''}`}
+            >
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                multiple
+                disabled={busy}
+                onChange={handlePhotosChange}
+                className="hidden"
+              />
+              {t('createAd.choosePhotos')}
+            </label>
             {photos.length > 0 && (
               <p className="mt-1 text-xs text-slate-500">
                 {t('createAd.photosSelected', { count: photos.length })}
               </p>
             )}
-          </label>
+          </div>
 
           <label className="block">
             <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldVideo')}</div>

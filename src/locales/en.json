@@ -219,6 +219,7 @@
     "fieldCity": "City",
     "fieldCityPlaceholder": "Select…",
     "fieldPhotos": "Photos",
+    "choosePhotos": "Choose photos",
     "photosSelected": "{{count}} photo(s) selected",
     "fieldVideo": "Video URL (optional)"
   },
