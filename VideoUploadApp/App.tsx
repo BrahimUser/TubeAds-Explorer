@@ -5,14 +5,10 @@ import { NavigationContainer, type Theme } from '@react-navigation/native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GOOGLE_WEB_CLIENT_ID, YOUTUBE_SCOPES } from './src/config/constants';
+import { AuthProvider } from './src/context/AuthContext';
 import { AuthProfileProvider } from './src/context/AuthProfileContext';
 import { RootStack } from './src/navigation/RootStack';
 import { SplashScreen } from './src/components/SplashScreen';
-import {
-  attachFcmForegroundListeners,
-  bootstrapNotifications,
-  getFcmToken,
-} from './src/services/notifications';
 import { colors, typography } from './src/theme';
 
 /** Minimum time the branded splash must stay on screen (ms). */
@@ -47,32 +43,6 @@ export default function App() {
       forceCodeForRefreshToken: false,
       scopes: YOUTUBE_SCOPES,
     });
-  }, []);
-
-  // FCM lifecycle: request OS permission + create channel, log the token
-  // for manual testing from the Firebase Console, and attach foreground
-  // listeners. Cleanup detaches the listeners on unmount.
-  useEffect(() => {
-    let detachListeners: (() => void) | undefined;
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        await bootstrapNotifications();
-        await getFcmToken();
-        if (!cancelled) {
-          detachListeners = attachFcmForegroundListeners();
-        }
-      } catch {
-        // Failure is non-fatal — push simply won't work until the user
-        // grants permission or Google Play Services becomes available.
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      detachListeners?.();
-    };
   }, []);
 
   useEffect(() => {
@@ -114,14 +84,16 @@ export default function App() {
         {showSplash ? (
           <SplashScreen />
         ) : (
-          <AuthProfileProvider>
-            <NavigationContainer
-              theme={navigationTheme}
-              direction={I18nManager.isRTL ? 'rtl' : 'ltr'}
-            >
-              <RootStack />
-            </NavigationContainer>
-          </AuthProfileProvider>
+          <AuthProvider>
+            <AuthProfileProvider>
+              <NavigationContainer
+                theme={navigationTheme}
+                direction={I18nManager.isRTL ? 'rtl' : 'ltr'}
+              >
+                <RootStack />
+              </NavigationContainer>
+            </AuthProfileProvider>
+          </AuthProvider>
         )}
       </SafeAreaProvider>
     </GestureHandlerRootView>

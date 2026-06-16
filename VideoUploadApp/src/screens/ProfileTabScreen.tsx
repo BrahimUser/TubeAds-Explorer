@@ -45,7 +45,7 @@ export function ProfileTabScreen() {
             {user.displayName || 'User'}
           </Text>
           <Text style={styles.email} numberOfLines={1}>
-            {user.email ?? user.uid}
+            {user.phoneNumber ?? user.uid}
           </Text>
         </View>
       </View>

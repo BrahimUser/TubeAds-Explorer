@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthUser } from '../hooks/useAuthUser';
 import type { RootStackParamList } from '../navigation/types';
-import { listenBuyerOrders, orderMatchesBuyerTab } from '../services/commerceFirestore';
+import { listenBuyerOrders, orderMatchesBuyerTab } from '../services/orders';
 import { colors, radii, shadow, spacing, typography } from '../theme';
 import type { Order, OrderStatus } from '../types/Commerce';
 import { formatPriceMad } from '../utils/formatPrice';
@@ -23,11 +23,13 @@ import type { Currency } from '../types/Ad';
 
 type Tab = 'ongoing' | 'completed' | 'cancelled';
 
+import { apiDateToMs } from '../utils/apiMappers';
+
 function orderDateShort(order: Order): string {
-  const t = order.createdAt;
-  if (!t || typeof t.toDate !== 'function') return '';
+  const ms = apiDateToMs(order.createdAt);
+  if (ms == null) return '';
   try {
-    return t.toDate().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    return new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   } catch {
     return '';
   }

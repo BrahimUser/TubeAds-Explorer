@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -23,10 +23,14 @@ import { PopularCategoriesSection } from '../components/marketplace/PopularCateg
 import { PromoBanner } from '../components/marketplace/PromoBanner';
 import type { CategoryId } from '../config/marketplace';
 import { cityLabel } from '../config/marketplace';
+import type { NotificationItem } from '../data/mockNotifications';
+import { createPoller } from '../hooks/usePolling';
 import {
-  buildMockNotifications,
-  type NotificationItem,
-} from '../data/mockNotifications';
+  fetchRecentNotifications,
+  fetchUnreadNotificationsCount,
+  markNotificationRead,
+} from '../services/notificationsApi';
+import { apiDateToMs } from '../utils/apiMappers';
 import { useAds } from '../hooks/useAds';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { useFavoriteIds } from '../hooks/useFavoriteIds';
@@ -47,13 +51,7 @@ const RECENT_CARD_W = W * 0.72;
 type Nav = StackNavigationProp<RootStackParamList>;
 
 function adCreatedMs(ad: Ad): number | null {
-  const t = ad.createdAt;
-  if (!t) return null;
-  if (typeof (t as { toMillis?: () => number }).toMillis === 'function') {
-    return (t as { toMillis: () => number }).toMillis();
-  }
-  const secs = (t as { seconds?: number }).seconds;
-  return secs != null ? secs * 1000 : null;
+  return apiDateToMs(ad.createdAt);
 }
 
 function isNewAd(ad: Ad): boolean {
@@ -72,14 +70,8 @@ export function HomeMarketplaceScreen() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(() =>
-    buildMockNotifications(),
-  );
-
-  const unreadCount = useMemo(
-    () => notifications.filter((n) => !n.read).length,
-    [notifications],
-  );
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const { user } = useAuthUser();
   const { ids: favoriteIds } = useFavoriteIds(user?.uid ?? null);
@@ -95,7 +87,39 @@ export function HomeMarketplaceScreen() {
     });
   };
 
-  const { ads, loading, error, indexBuilding } = useAds({ category });
+  const { ads, loading, error } = useAds({ category });
+
+  useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+    const load = async () => {
+      const [list, count] = await Promise.all([
+        fetchRecentNotifications(),
+        fetchUnreadNotificationsCount(),
+      ]);
+      setNotifications(list);
+      setUnreadCount(count);
+    };
+    void load();
+    return createPoller(
+      async () => {
+        const [list, count] = await Promise.all([
+          fetchRecentNotifications(),
+          fetchUnreadNotificationsCount(),
+        ]);
+        return { list, count };
+      },
+      ({ list, count }) => {
+        setNotifications(list);
+        setUnreadCount(count);
+      },
+      undefined,
+      15000,
+    );
+  }, [user?.uid]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -131,15 +155,13 @@ export function HomeMarketplaceScreen() {
   const publish = () => navigation.navigate('PostAd');
 
   const onPressBell = () => {
-    // Mark everything as read on open so the badge clears, mirroring
-    // standard inbox behavior. Items themselves stay until the user
-    // explicitly clears them.
-    setNotifications((prev) =>
-      prev.some((n) => !n.read)
-        ? prev.map((n) => ({ ...n, read: true }))
-        : prev,
-    );
-    setNotificationsOpen(true);
+    void (async () => {
+      const unread = notifications.filter((n) => !n.read);
+      await Promise.all(unread.map((n) => markNotificationRead(n.id)));
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+      setNotificationsOpen(true);
+    })();
   };
 
   const onClearNotifications = () => {
@@ -210,9 +232,6 @@ export function HomeMarketplaceScreen() {
         {loading ? (
           <View style={styles.loader}>
             <ActivityIndicator color={colors.marketplaceOrange} size="large" />
-            {indexBuilding ? (
-              <Text style={styles.indexHint}>{t('home.indexBuildingHint')}</Text>
-            ) : null}
           </View>
         ) : error ? (
           <Text style={styles.err}>{error.message}</Text>

@@ -25,7 +25,7 @@ import type { StackScreenProps } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categoryLabel, cityLabel } from '../config/marketplace';
 import type { RootStackParamList } from '../navigation/types';
-import { getAd } from '../services/firestore';
+import { getAd } from '../services/listings';
 import { toggleFavorite } from '../services/favorites';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { useFavoriteIds } from '../hooks/useFavoriteIds';
@@ -40,14 +40,10 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 type Props = StackScreenProps<RootStackParamList, 'ProductDetail'>;
 
+import { apiDateToMs } from '../utils/apiMappers';
+
 function adCreatedMs(ad: Ad): number | null {
-  const t = ad.createdAt;
-  if (!t) return null;
-  if (typeof (t as { toMillis?: () => number }).toMillis === 'function') {
-    return (t as { toMillis: () => number }).toMillis();
-  }
-  const secs = (t as { seconds?: number }).seconds;
-  return secs != null ? secs * 1000 : null;
+  return apiDateToMs(ad.createdAt);
 }
 
 function secondaryTagFromTitle(title: string): string {

@@ -15,15 +15,14 @@ import {
 import type { StackScreenProps } from '@react-navigation/stack';
 import { Image as ImageIcon, Send } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import auth from '@react-native-firebase/auth';
 import { useAuthUser } from '../hooks/useAuthUser';
 import type { RootStackParamList } from '../navigation/types';
 import {
   getOrCreateChatThread,
   listenThreadMessages,
   sendChatMessage,
-} from '../services/commerceFirestore';
-import { getAd } from '../services/firestore';
+} from '../services/chat';
+import { getAd } from '../services/listings';
 import { colors, radii, shadow, spacing, typography } from '../theme';
 import type { Ad } from '../types/Ad';
 import type { ChatMessage } from '../types/Commerce';
@@ -96,7 +95,7 @@ export function ChatScreen({ navigation, route }: Props) {
     };
   }, [adId, user, navigation, threadIdParam]);
 
-  const uid = user?.uid ?? auth().currentUser?.uid;
+  const uid = user?.uid;
 
   const onSend = async () => {
     if (!threadId || !text.trim() || sending) return;
@@ -114,7 +113,7 @@ export function ChatScreen({ navigation, route }: Props) {
   const onAttach = () => {
     Alert.alert(
       'Attachment',
-      'Image uploads will be available after you configure Firebase Storage.',
+      'Image uploads will be available via the uploads API in a future update.',
     );
   };
 

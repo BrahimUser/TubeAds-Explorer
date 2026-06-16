@@ -40,7 +40,7 @@ import {
 import { useAuthUser } from '../hooks/useAuthUser';
 import type { RootStackParamList } from '../navigation/types';
 import { getYoutubeAccessToken } from '../services/auth';
-import { createAd } from '../services/firestore';
+import { createAd } from '../services/listings';
 import { colors, radii, spacing, typography } from '../theme';
 import { uploadVideoToYouTube, youtubeThumbnailUrl } from '../services/youtube';
 

@@ -1,7 +1,6 @@
-import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import type { Currency } from './Ad';
 
-/** Stored on each order document in Firestore (exact strings for queries/filters). */
+/** Stored on each order — mobile UI uses title-case labels. */
 export type OrderStatus = 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
 
 export type DeliveryMethod = 'home' | 'hand';
@@ -37,15 +36,15 @@ export type Order = {
   totalCents: number;
   /** Legacy buyer timeline (optional). */
   timeline?: OrderTimelineStep[];
-  createdAt: FirebaseFirestoreTypes.Timestamp | null;
-  updatedAt: FirebaseFirestoreTypes.Timestamp | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
 
 export type OrderTimelineStep = {
   key: string;
   label: string;
   done: boolean;
-  at: FirebaseFirestoreTypes.Timestamp | null;
+  at: string | null;
 };
 
 export type ChatThread = {
@@ -58,8 +57,8 @@ export type ChatThread = {
   productThumb: string;
   priceLabel: string;
   lastMessageText: string;
-  lastMessageAt: FirebaseFirestoreTypes.Timestamp | null;
-  createdAt: FirebaseFirestoreTypes.Timestamp | null;
+  lastMessageAt: string | null;
+  createdAt: string | null;
 };
 
 export type ChatMessage = {
@@ -68,5 +67,5 @@ export type ChatMessage = {
   senderUid: string;
   text: string;
   imageUrl: string | null;
-  createdAt: FirebaseFirestoreTypes.Timestamp | null;
+  createdAt: string | null;
 };

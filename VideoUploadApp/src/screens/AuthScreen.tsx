@@ -16,6 +16,7 @@ const LOGO = require('../../assets/images/logo.png');
 import type { StackScreenProps } from '@react-navigation/stack';
 import { Button } from '../components/Button';
 import type { RootStackParamList } from '../navigation/types';
+import { useAuth } from '../context/AuthContext';
 import {
   mapFirebaseAuthError,
   registerWithPhonePassword,
@@ -31,6 +32,7 @@ type Mode = 'sign-in' | 'sign-up';
  * Phone + password auth — same synthetic email + Firestore user doc flow as the website.
  */
 export function AuthScreen({ navigation, route }: Props) {
+  const { refreshSession } = useAuth();
   const [mode, setMode] = useState<Mode>(route.params?.mode ?? 'sign-in');
   const [phoneLocal, setPhoneLocal] = useState('');
   const [password, setPassword] = useState('');
@@ -58,6 +60,7 @@ export function AuthScreen({ navigation, route }: Props) {
       } else {
         await signInWithPhonePassword(phoneLocal, password);
       }
+      await refreshSession();
       navigation.goBack();
     } catch (e) {
       const code = (e as { code?: string })?.code;

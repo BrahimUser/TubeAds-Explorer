@@ -13,12 +13,9 @@ import type { StackScreenProps } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthUser } from '../hooks/useAuthUser';
 import type { RootStackParamList } from '../navigation/types';
-import {
-  ensureChatThreadForOrder,
-  getOrder,
-  sellerAdvanceOrder,
-} from '../services/commerceFirestore';
-import { getAd } from '../services/firestore';
+import { findChatThreadForOrder } from '../services/chat';
+import { getOrder, sellerAdvanceOrder } from '../services/orders';
+import { apiDateToMs } from '../utils/apiMappers';
 import { colors, radii, shadow, spacing, typography } from '../theme';
 import type { Order } from '../types/Commerce';
 import { formatPriceMad } from '../utils/formatPrice';
@@ -35,10 +32,10 @@ function paymentLabel(method: Order['paymentMethod']): string {
 }
 
 function orderDateLabel(order: Order): string {
-  const t = order.createdAt;
-  if (!t || typeof t.toDate !== 'function') return '—';
+  const ms = apiDateToMs(order.createdAt);
+  if (ms == null) return '—';
   try {
-    return t.toDate().toLocaleString('en-GB', {
+    return new Date(ms).toLocaleString('en-GB', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -113,12 +110,18 @@ export function SellerOrderDetailScreen({ navigation, route }: Props) {
     if (!order) return;
     setActing(true);
     try {
-      const ad = await getAd(order.adId);
-      if (!ad) {
-        Alert.alert('Error', 'Listing not found.');
+      const threadId = await findChatThreadForOrder(
+        order.adId,
+        order.buyerUid,
+        order.sellerUid,
+      );
+      if (!threadId) {
+        Alert.alert(
+          'No conversation yet',
+          'The buyer has not started a chat on this listing.',
+        );
         return;
       }
-      const threadId = await ensureChatThreadForOrder(ad, order.buyerUid);
       navigation.navigate('Chat', {
         threadId,
         adId: order.adId,

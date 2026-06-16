@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { useIsAdmin } from '../hooks/useIsAdmin';
 import type { RootStackParamList } from '../navigation/types';
-import { approveListing, listenToPendingAds, rejectListing } from '../services/firestore';
+import { approveListing, listenToPendingAds, rejectListing } from '../services/listings';
 import { colors, radii, shadow, spacing, typography } from '../theme';
 import type { Ad, Currency } from '../types/Ad';
 import { formatPriceMad } from '../utils/formatPrice';
@@ -81,7 +81,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
     return (
       <View style={[styles.center, styles.pad, { paddingTop: insets.top }]}>
         <Text style={styles.title}>Admins only</Text>
-        <Text style={styles.bodyMuted}>Your account does not have the admin role in Firestore.</Text>
+        <Text style={styles.bodyMuted}>Your account does not have the admin role.</Text>
       </View>
     );
   }

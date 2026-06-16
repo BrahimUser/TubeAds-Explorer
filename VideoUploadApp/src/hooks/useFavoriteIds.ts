@@ -1,16 +1,9 @@
 import { useEffect, useState } from 'react';
-import { listenFavoriteIds } from '../services/favorites';
+import { fetchFavoriteIds } from '../services/favorites';
+import { createPoller } from './usePolling';
 
 /**
- * Live set of ad ids favorited by the given user.
- *
- * - When `uid` is `null` (signed out) the hook returns an empty set and
- *   never opens a listener.
- * - The returned `ids` is a stable `Set` reference per snapshot, so
- *   `ids.has(adId)` is O(1) for every card render.
- *
- * Always render the heart icon optimistically; tap handlers should
- * prompt sign-in when `uid` is `null`.
+ * Polls favorited ad ids for the signed-in user.
  */
 export function useFavoriteIds(uid: string | null | undefined): {
   ids: Set<string>;
@@ -27,15 +20,15 @@ export function useFavoriteIds(uid: string | null | undefined): {
     }
 
     setLoading(true);
-    const unsub = listenFavoriteIds(
-      uid,
+    return createPoller(
+      () => fetchFavoriteIds(),
       (next) => {
         setIds(next);
         setLoading(false);
       },
       () => setLoading(false),
+      8000,
     );
-    return unsub;
   }, [uid]);
 
   return { ids, loading };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -10,13 +10,14 @@ import {
   View,
 } from 'react-native';
 import { Heart, HeartOff, Trash2 } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
 import { useAuthUser } from '../hooks/useAuthUser';
+import { createPoller } from '../hooks/usePolling';
 import {
-  listenFavorites,
+  fetchFavorites,
   removeFavorite,
   type FavoriteItem,
 } from '../services/favorites';
@@ -32,13 +33,6 @@ const H_PAD = spacing.lg;
 const GRID_GAP = 12;
 const CARD_W = (W - H_PAD * 2 - GRID_GAP) / 2;
 
-/**
- * Live grid of the current user's favorited listings.
- *
- * Subscribes to `users/{uid}/favorites` and re-renders whenever the
- * user (un)favorites an ad anywhere else in the app — so swiping the
- * heart on Home immediately reflects here.
- */
 export function FavoritesScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
@@ -47,6 +41,23 @@ export function FavoritesScreen() {
   const [loading, setLoading] = useState<boolean>(!!user);
   const [error, setError] = useState<string | null>(null);
 
+  const refresh = useCallback(async () => {
+    if (!user) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+    try {
+      setError(null);
+      const next = await fetchFavorites();
+      setItems(next);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     if (!user) {
       setItems([]);
@@ -54,10 +65,8 @@ export function FavoritesScreen() {
       return;
     }
     setLoading(true);
-    setError(null);
-
-    const unsub = listenFavorites(
-      user.uid,
+    return createPoller(
+      () => fetchFavorites(),
       (next) => {
         setItems(next);
         setLoading(false);
@@ -66,9 +75,18 @@ export function FavoritesScreen() {
         setError(e.message);
         setLoading(false);
       },
+      8000,
     );
-    return unsub;
-  }, [user]);
+  }, [user?.uid]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        setLoading(true);
+        void refresh();
+      }
+    }, [user, refresh]),
+  );
 
   if (initializing) {
     return (
@@ -103,7 +121,7 @@ export function FavoritesScreen() {
     );
   }
 
-  if (loading) {
+  if (loading && items.length === 0) {
     return (
       <View style={[styles.root, { paddingTop: insets.top }]}>
         <Header />
@@ -159,7 +177,7 @@ export function FavoritesScreen() {
               navigation.navigate('ProductDetail', { adId: item.adId })
             }
             onRemove={() => {
-              void removeFavorite(item.adId).catch(() => {});
+              void removeFavorite(item.adId).then(() => refresh()).catch(() => {});
             }}
           />
         )}

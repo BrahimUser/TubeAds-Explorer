@@ -19,7 +19,8 @@ import {
   listenSellerOrders,
   orderMatchesSellerChip,
   sellerAdvanceOrder,
-} from '../services/commerceFirestore';
+} from '../services/orders';
+import { formatApiDateLabel } from '../utils/apiMappers';
 import { colors, radii, shadow, spacing, typography } from '../theme';
 import type { Order, OrderStatus } from '../types/Commerce';
 import { formatPriceMad } from '../utils/formatPrice';
@@ -31,13 +32,7 @@ type StatusChip = 'all' | OrderStatus;
 type Props = StackScreenProps<RootStackParamList, 'SellerDashboard'>;
 
 function orderDateLabel(order: Order): string {
-  const t = order.createdAt;
-  if (!t || typeof t.toDate !== 'function') return '—';
-  try {
-    return t.toDate().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch {
-    return '—';
-  }
+  return formatApiDateLabel(order.createdAt);
 }
 
 function statusBadgeStyle(status: OrderStatus) {

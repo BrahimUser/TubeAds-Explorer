@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { ChevronRight } from 'lucide-react-native';
 import { useAuthUser } from '../hooks/useAuthUser';
 import type { RootStackParamList } from '../navigation/types';
-import { listenChatThreads } from '../services/commerceFirestore';
+import { listenChatThreads } from '../services/chat';
 import { colors, radii, shadow, spacing, typography } from '../theme';
 import type { ChatThread } from '../types/Commerce';
 

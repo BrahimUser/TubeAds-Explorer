@@ -7,11 +7,6 @@
 // stack navigator (and any other consumer of GestureHandlerRootView).
 import 'react-native-gesture-handler';
 
-// Registers the FCM background handler. Loaded BEFORE `App` so the
-// native side can wake JS in headless mode when a message arrives while
-// the app is backgrounded or killed.
-import './src/services/fcmBackgroundHandler';
-
 import { AppRegistry, I18nManager } from 'react-native';
 import App from './App';
 import { name as appName } from './app.json';
