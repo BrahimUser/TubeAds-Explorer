@@ -154,7 +154,15 @@
     "adminDashboard": "Admin dashboard",
     "listings": "Listings",
     "home": "Home",
-    "mobileNav": "Mobile navigation"
+    "mobileNav": "Mobile navigation",
+    "searchDropdown": {
+      "loading": "Searching…",
+      "empty": "No listings match \"{{query}}\".",
+      "error": "Search failed. Please try again.",
+      "retry": "Retry",
+      "clear": "Clear search",
+      "resultsAria": "{{count}} search results"
+    }
   },
   "myAds": {
     "pageTitle": "My ads",

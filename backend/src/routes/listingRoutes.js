@@ -6,6 +6,7 @@ import { asyncHandler } from '../middleware/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import {
   listListingsValidator,
+  searchListingsValidator,
   listingIdValidator,
   createListingValidator,
   updateListingValidator,
@@ -13,6 +14,7 @@ import {
 
 const router = Router();
 
+router.get('/search', searchListingsValidator, validate, asyncHandler(listingController.search));
 router.get('/', listListingsValidator, validate, asyncHandler(listingController.list));
 router.get('/:id', listingIdValidator, validate, asyncHandler(listingController.getById));
 router.post('/', authenticate, createListingValidator, validate, asyncHandler(listingController.create));

@@ -1,7 +1,13 @@
 import { listingService } from '../services/listingService.js';
+import { searchService } from '../services/searchService.js';
 import { success } from '../utils/ApiResponse.js';
 
 export const listingController = {
+  async search(req, res) {
+    const result = await searchService.search(req.query);
+    return success(res, result);
+  },
+
   async list(req, res) {
     const result = await listingService.list(req.query);
     return success(res, result);

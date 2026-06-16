@@ -8,6 +8,7 @@ export const queryKeys = {
     all: ['listings'],
     lists: () => [...queryKeys.listings.all, 'list'],
     list: (filters) => [...queryKeys.listings.lists(), filters],
+    search: (q) => [...queryKeys.listings.all, 'search', q ?? ''],
     details: () => [...queryKeys.listings.all, 'detail'],
     detail: (id) => [...queryKeys.listings.details(), id],
   },

@@ -454,9 +454,7 @@ function Shell() {
         locale={locale}
         onLocaleChange={setLocale}
         onNavigate={handleNavigate}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onSearchSubmit={() => scrollToId('listings')}
+        onOpenListing={goListingDetail}
         onOpenMessages={() => {
           if (!user) {
             requireLogin();
