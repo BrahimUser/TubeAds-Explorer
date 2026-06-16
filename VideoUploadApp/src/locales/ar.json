@@ -1,0 +1,60 @@
+{
+  "common": {
+    "close": "إغلاق"
+  },
+  "language": {
+    "title": "اللغة",
+    "english": "الإنجليزية",
+    "arabic": "العربية",
+    "french": "الفرنسية",
+    "accessibilityPicker": "اختيار لغة التطبيق"
+  },
+  "searchPlaceholder": "ابحث عن أي شيء...",
+  "categories": {
+    "all": "الكل",
+    "rugs": "سجاد",
+    "electronics": "إلكترونيات",
+    "vehicles": "مركبات",
+    "real-estate": "عقارات",
+    "fashion": "أزياء",
+    "home": "المنزل",
+    "jobs": "وظائف",
+    "services": "خدمات",
+    "other": "أخرى"
+  },
+  "tabs": {
+    "home": "الرئيسية",
+    "favorites": "المفضلة",
+    "publish": "نشر",
+    "messages": "الرسائل",
+    "admin": "المشرف",
+    "profile": "الملف الشخصي"
+  },
+  "headerTitle": "السوق",
+  "postYourAd": "انشر إعلانك",
+  "promo": {
+    "title": "انشر إعلانك",
+    "subtitle": "سريع ومجاني!",
+    "cta": "انشر إعلانك"
+  },
+  "sections": {
+    "recent": "أحدث الإعلانات",
+    "popular": "فئات شائعة",
+    "recommended": "موصى به لك"
+  },
+  "popularCard": {
+    "listingsCount": "{{range}} إعلانًا"
+  },
+  "home": {
+    "emptyListings": "لا توجد إعلانات بعد.",
+    "indexBuildingHint": "بانتظار اكتمال فهرس البحث في Firebase (الحالة: مفعّل في وحدة التحكم). تُحدَّث هذه الشاشة تلقائيًا.",
+    "notifications": "الإشعارات",
+    "profile": "الملف الشخصي",
+    "filters": "عوامل التصفية",
+    "promoDismiss": "إغلاق العرض"
+  },
+  "favorites": {
+    "comingSoonSubtitle": "قريبًا."
+  },
+  "newBadge": "جديد"
+}

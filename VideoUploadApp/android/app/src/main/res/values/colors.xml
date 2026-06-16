@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Notification accent color (Marketplace orange #FF6600). Used to
+         tint the small monochrome icon on Android 5+. -->
+    <color name="notification_color">#FF6600</color>
+</resources>

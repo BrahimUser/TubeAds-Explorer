@@ -1,0 +1,317 @@
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import type { StackScreenProps } from '@react-navigation/stack';
+import { Image as ImageIcon, Send } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import auth from '@react-native-firebase/auth';
+import { useAuthUser } from '../hooks/useAuthUser';
+import type { RootStackParamList } from '../navigation/types';
+import {
+  getOrCreateChatThread,
+  listenThreadMessages,
+  sendChatMessage,
+} from '../services/commerceFirestore';
+import { getAd } from '../services/firestore';
+import { colors, radii, shadow, spacing, typography } from '../theme';
+import type { Ad } from '../types/Ad';
+import type { ChatMessage } from '../types/Commerce';
+
+type Props = StackScreenProps<RootStackParamList, 'Chat'>;
+
+export function ChatScreen({ navigation, route }: Props) {
+  const { adId, threadId: threadIdParam } = route.params;
+  const insets = useSafeAreaInsets();
+  const { user } = useAuthUser();
+  const [ad, setAd] = useState<Ad | null>(null);
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const listRef = useRef<FlatList<ChatMessage>>(null);
+
+  useEffect(() => {
+    if (!user) {
+      navigation.replace('Auth', { mode: 'sign-in' });
+      return;
+    }
+    let alive = true;
+    let unsubMsgs: (() => void) | null = null;
+    setLoading(true);
+    void (async () => {
+      try {
+        const doc = await getAd(adId);
+        if (!alive) return;
+        if (!doc) {
+          Alert.alert('Error', 'Listing not found.');
+          setLoading(false);
+          return;
+        }
+        setAd(doc);
+        if (threadIdParam) {
+          if (!alive) return;
+          setThreadId(threadIdParam);
+          unsubMsgs = listenThreadMessages(
+            threadIdParam,
+            (list) => {
+              setMessages(list);
+              requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+            },
+            (e) => Alert.alert('Messages', e.message),
+          );
+        } else {
+          const tid = await getOrCreateChatThread({ ad: doc, buyerUid: user.uid });
+          if (!alive) return;
+          setThreadId(tid);
+          unsubMsgs = listenThreadMessages(
+            tid,
+            (list) => {
+              setMessages(list);
+              requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+            },
+            (e) => Alert.alert('Messages', e.message),
+          );
+        }
+      } catch (e) {
+        if (alive) Alert.alert('Messages', String((e as Error)?.message ?? e));
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+      unsubMsgs?.();
+    };
+  }, [adId, user, navigation, threadIdParam]);
+
+  const uid = user?.uid ?? auth().currentUser?.uid;
+
+  const onSend = async () => {
+    if (!threadId || !text.trim() || sending) return;
+    setSending(true);
+    try {
+      await sendChatMessage(threadId, text);
+      setText('');
+    } catch (e) {
+      Alert.alert('Could not send', String((e as Error)?.message ?? e));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const onAttach = () => {
+    Alert.alert(
+      'Attachment',
+      'Image uploads will be available after you configure Firebase Storage.',
+    );
+  };
+
+  if (!user) {
+    return (
+      <View style={[styles.center, { paddingTop: insets.top }]}>
+        <ActivityIndicator color={colors.marketplaceOrange} />
+      </View>
+    );
+  }
+
+  if (loading || !ad) {
+    return (
+      <View style={[styles.center, { paddingTop: insets.top }]}>
+        <ActivityIndicator color={colors.marketplaceOrange} size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      <Pressable
+        style={[styles.pinned, shadow.card]}
+        onPress={() => navigation.navigate('ProductDetail', { adId: ad.id })}
+      >
+        <Image source={{ uri: ad.thumbnailUrl }} style={styles.pinnedImg} resizeMode="cover" />
+        <View style={styles.pinnedBody}>
+          <Text style={styles.pinnedTitle} numberOfLines={2}>
+            {ad.title}
+          </Text>
+          <Text style={styles.pinnedSub} numberOfLines={1}>
+            Listing · Tap to open
+          </Text>
+        </View>
+      </Pressable>
+
+      <FlatList
+        ref={listRef}
+        data={messages}
+        keyExtractor={(m) => m.id}
+        contentContainerStyle={styles.listContent}
+        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+        renderItem={({ item }) => (
+          <Bubble message={item} isMine={item.senderUid === uid} />
+        )}
+        ListEmptyComponent={
+          <Text style={styles.empty}>Send a message to the seller.</Text>
+        }
+      />
+
+      <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
+        <Pressable style={styles.attachBtn} onPress={onAttach} accessibilityLabel="Attach image">
+          <ImageIcon size={24} color={colors.marketplaceOrange} strokeWidth={2} />
+        </Pressable>
+        <TextInput
+          style={styles.input}
+          value={text}
+          onChangeText={setText}
+          placeholder="Type a message..."
+          placeholderTextColor={colors.textDim}
+          multiline
+          maxLength={2000}
+        />
+        <Pressable
+          style={[styles.sendBtn, !text.trim() && { opacity: 0.45 }]}
+          onPress={() => void onSend()}
+          disabled={!text.trim() || sending}
+        >
+          <Send size={22} color="#FFFFFF" strokeWidth={2} />
+        </Pressable>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+function Bubble({ message, isMine }: { message: ChatMessage; isMine: boolean }) {
+  return (
+    <View
+      style={[
+        styles.bubbleWrap,
+        isMine ? styles.bubbleMineWrap : styles.bubbleTheirWrap,
+      ]}
+    >
+      <View
+        style={[
+          styles.bubble,
+          shadow.card,
+          isMine ? styles.bubbleMine : styles.bubbleTheir,
+        ]}
+      >
+        {message.imageUrl ? (
+          <Image source={{ uri: message.imageUrl }} style={styles.bubbleImg} resizeMode="cover" />
+        ) : null}
+        <Text style={[styles.bubbleTxt, isMine && styles.bubbleTxtMine]}>
+          {message.text.trim()}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  pinned: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radii.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  pinnedImg: { width: 72, height: 72 },
+  pinnedBody: { flex: 1, padding: spacing.md, justifyContent: 'center', gap: 4 },
+  pinnedTitle: { ...typography.title, fontSize: 14, color: colors.marketplaceTitle },
+  pinnedSub: { ...typography.caption, color: colors.marketplaceOrange, fontWeight: '600' },
+  listContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg },
+  empty: {
+    ...typography.caption,
+    color: colors.textDim,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+  },
+  bubbleWrap: { marginBottom: spacing.sm, maxWidth: '88%' },
+  bubbleMineWrap: { alignSelf: 'flex-end' },
+  bubbleTheirWrap: { alignSelf: 'flex-start' },
+  bubble: {
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderWidth: 1,
+  },
+  bubbleMine: {
+    backgroundColor: colors.marketplaceOrange,
+    borderColor: colors.marketplaceOrange,
+  },
+  bubbleTheir: {
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
+  },
+  bubbleImg: { width: 200, height: 120, borderRadius: 8, marginBottom: spacing.sm },
+  bubbleTxt: { ...typography.body, color: colors.text },
+  bubbleTxtMine: { color: '#FFFFFF' },
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    backgroundColor: colors.surfaceElevated,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  attachBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 2,
+  },
+  input: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 120,
+    backgroundColor: colors.bg,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...typography.body,
+    color: colors.text,
+  },
+  sendBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    backgroundColor: colors.marketplaceOrange,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+    shadowColor: colors.marketplaceOrange,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+});
+
+export default ChatScreen;

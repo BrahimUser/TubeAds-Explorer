@@ -1,0 +1,60 @@
+{
+  "common": {
+    "close": "Fermer"
+  },
+  "language": {
+    "title": "Langue",
+    "english": "Anglais",
+    "arabic": "Arabe",
+    "french": "Français",
+    "accessibilityPicker": "Choisir la langue de l’application"
+  },
+  "searchPlaceholder": "Rechercher n’importe quoi…",
+  "categories": {
+    "all": "Tout",
+    "rugs": "Tapis",
+    "electronics": "Électronique",
+    "vehicles": "Véhicules",
+    "real-estate": "Immobilier",
+    "fashion": "Mode",
+    "home": "Maison",
+    "jobs": "Emplois",
+    "services": "Services",
+    "other": "Autres"
+  },
+  "tabs": {
+    "home": "Accueil",
+    "favorites": "Favoris",
+    "publish": "Publier",
+    "messages": "Messages",
+    "admin": "Admin",
+    "profile": "Profil"
+  },
+  "headerTitle": "Marketplace",
+  "postYourAd": "Publier votre annonce",
+  "promo": {
+    "title": "Publier votre annonce",
+    "subtitle": "C’est rapide et gratuit !",
+    "cta": "Publier votre annonce"
+  },
+  "sections": {
+    "recent": "Annonces récentes",
+    "popular": "Catégories populaires",
+    "recommended": "Annonces recommandées"
+  },
+  "popularCard": {
+    "listingsCount": "{{range}} annonces"
+  },
+  "home": {
+    "emptyListings": "Aucune annonce pour le moment.",
+    "indexBuildingHint": "En attente de la finalisation de l’index de recherche Firebase (statut : activé dans la console). Cet écran se met à jour automatiquement.",
+    "notifications": "Notifications",
+    "profile": "Profil",
+    "filters": "Filtres",
+    "promoDismiss": "Fermer la promo"
+  },
+  "favorites": {
+    "comingSoonSubtitle": "Bientôt disponible."
+  },
+  "newBadge": "Nouveau"
+}

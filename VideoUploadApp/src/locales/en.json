@@ -1,0 +1,60 @@
+{
+  "common": {
+    "close": "Close"
+  },
+  "language": {
+    "title": "Language",
+    "english": "English",
+    "arabic": "Arabic",
+    "french": "French",
+    "accessibilityPicker": "Choose app language"
+  },
+  "searchPlaceholder": "Search anything...",
+  "categories": {
+    "all": "All",
+    "rugs": "Rugs",
+    "electronics": "Electronics",
+    "vehicles": "Vehicles",
+    "real-estate": "Real Estate",
+    "fashion": "Fashion",
+    "home": "Home",
+    "jobs": "Jobs",
+    "services": "Services",
+    "other": "Others"
+  },
+  "tabs": {
+    "home": "Home",
+    "favorites": "Favorites",
+    "publish": "Publish",
+    "messages": "Messages",
+    "admin": "Admin",
+    "profile": "Profile"
+  },
+  "headerTitle": "Marketplace",
+  "postYourAd": "Post your ad",
+  "promo": {
+    "title": "Post your ad",
+    "subtitle": "It's quick and free!",
+    "cta": "Post your ad"
+  },
+  "sections": {
+    "recent": "Recent listings",
+    "popular": "Popular categories",
+    "recommended": "Recommended for you"
+  },
+  "popularCard": {
+    "listingsCount": "{{range}} listings"
+  },
+  "home": {
+    "emptyListings": "No listings yet.",
+    "indexBuildingHint": "Waiting for Firebase to finish building the search index (status: Enabled in the console). This screen updates automatically.",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "filters": "Filters",
+    "promoDismiss": "Close promo"
+  },
+  "favorites": {
+    "comingSoonSubtitle": "Coming soon."
+  },
+  "newBadge": "New"
+}
