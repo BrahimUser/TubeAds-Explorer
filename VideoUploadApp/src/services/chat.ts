@@ -49,7 +49,11 @@ export async function fetchChatThreads(): Promise<ChatThread[]> {
 export function listenChatThreads(
   onChange: (threads: ChatThread[]) => void,
   onError: (e: Error) => void,
+  options?: { enabled?: boolean },
 ): () => void {
+  if (options?.enabled === false) {
+    return () => undefined;
+  }
   return createPoller(
     () => fetchChatThreads(),
     onChange,
@@ -70,36 +74,69 @@ export function listenThreadMessages(
   onChange: (messages: ChatMessage[]) => void,
   onError: (e: Error) => void,
 ): () => void {
+  let cancelled = false;
+  let pollCleanup: (() => void) | undefined;
   let socketCleanup: (() => void) | undefined;
+
+  const startPolling = () => {
+    if (pollCleanup || cancelled) return;
+    pollCleanup = createPoller(
+      () => fetchThreadMessages(threadId),
+      onChange,
+      onError,
+      5000,
+    );
+  };
+
+  const stopPolling = () => {
+    pollCleanup?.();
+    pollCleanup = undefined;
+  };
 
   void (async () => {
     const socket = await getSocket();
-    if (socket) {
-      socket.emit('chat:join_thread', { threadId });
-      const onMessage = (payload: { threadId?: string }) => {
-        if (payload?.threadId === threadId) {
-          void fetchThreadMessages(threadId)
-            .then(onChange)
-            .catch((err) => onError(err as Error));
-        }
-      };
-      socket.on('chat:message', onMessage);
-      socketCleanup = () => {
-        socket.emit('chat:leave_thread', { threadId });
-        socket.off('chat:message', onMessage);
-      };
+    if (cancelled) return;
+
+    if (!socket) {
+      startPolling();
+      return;
     }
+
+    socket.emit('chat:join_thread', { threadId });
+    const onMessage = (payload: { threadId?: string }) => {
+      if (payload?.threadId === threadId) {
+        void fetchThreadMessages(threadId)
+          .then((list) => {
+            if (!cancelled) onChange(list);
+          })
+          .catch((err) => onError(err as Error));
+      }
+    };
+    socket.on('chat:message', onMessage);
+
+    const onConnect = () => stopPolling();
+    const onDisconnect = () => startPolling();
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+
+    if (socket.connected) {
+      stopPolling();
+    } else {
+      startPolling();
+    }
+
+    socketCleanup = () => {
+      socket.emit('chat:leave_thread', { threadId });
+      socket.off('chat:message', onMessage);
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+    };
   })();
 
-  const pollCleanup = createPoller(
-    () => fetchThreadMessages(threadId),
-    onChange,
-    onError,
-    3000,
-  );
-
   return () => {
-    pollCleanup();
+    cancelled = true;
+    stopPolling();
     socketCleanup?.();
   };
 }

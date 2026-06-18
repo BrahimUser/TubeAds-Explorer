@@ -45,3 +45,19 @@ export function profileToAppUser(profile: Record<string, unknown>): AppUser {
     updatedAt: (profile.updatedAt as string | null) ?? null,
   };
 }
+
+export function appUsersEqual(a: AppUser | null, b: AppUser | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.uid === b.uid &&
+    a.phoneNumber === b.phoneNumber &&
+    a.displayName === b.displayName &&
+    a.role === b.role &&
+    a.isPro === b.isPro &&
+    a.shopName === b.shopName &&
+    a.shopLogoUrl === b.shopLogoUrl &&
+    a.shopDescription === b.shopDescription &&
+    a.updatedAt === b.updatedAt
+  );
+}

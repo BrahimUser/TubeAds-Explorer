@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,16 +18,41 @@ import { listenChatThreads } from '../services/chat';
 import { colors, radii, shadow, spacing, typography } from '../theme';
 import type { ChatThread } from '../types/Commerce';
 
-export function ChatInboxScreen() {
+const ThreadRow = React.memo(function ThreadRow({
+  item,
+  onPress,
+}: {
+  item: ChatThread;
+  onPress: (thread: ChatThread) => void;
+}) {
+  return (
+    <Pressable style={[styles.row, shadow.card]} onPress={() => onPress(item)}>
+      <Image source={{ uri: item.productThumb }} style={styles.thumb} resizeMode="cover" />
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle} numberOfLines={2}>
+          {item.productTitle}
+        </Text>
+        <Text style={styles.rowSub} numberOfLines={1}>
+          {item.lastMessageText || 'Chat'}
+        </Text>
+      </View>
+      <ChevronRight size={20} color={colors.textDim} />
+    </Pressable>
+  );
+});
+
+export function ChatInboxScreen({ isFocused = true }: { isFocused?: boolean }) {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { user } = useAuthUser();
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.uid) {
-      setThreads([]);
-      setLoading(false);
+    if (!user?.uid || !isFocused) {
+      if (!user?.uid) {
+        setThreads([]);
+        setLoading(false);
+      }
       return;
     }
     const unsub = listenChatThreads(
@@ -39,15 +64,26 @@ export function ChatInboxScreen() {
         Alert.alert('Messages', e.message);
         setLoading(false);
       },
+      { enabled: isFocused },
     );
     return unsub;
-  }, [user?.uid]);
+  }, [user?.uid, isFocused]);
 
-  const openThread = (t: ChatThread) => {
-    if (!user?.uid) return;
-    const sellerUid = user.uid === t.buyerUid ? t.sellerUid : t.buyerUid;
-    navigation.navigate('Chat', { threadId: t.id, adId: t.adId, sellerUid });
-  };
+  const openThread = useCallback(
+    (t: ChatThread) => {
+      if (!user?.uid) return;
+      const sellerUid = user.uid === t.buyerUid ? t.sellerUid : t.buyerUid;
+      navigation.navigate('Chat', { threadId: t.id, adId: t.adId, sellerUid });
+    },
+    [navigation, user?.uid],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: ChatThread }) => <ThreadRow item={item} onPress={openThread} />,
+    [openThread],
+  );
+
+  const keyExtractor = useCallback((t: ChatThread) => t.id, []);
 
   if (!user) {
     return (
@@ -73,28 +109,16 @@ export function ChatInboxScreen() {
       <FlatList
         style={styles.listFlex}
         data={threads}
-        keyExtractor={(t) => t.id}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
         contentContainerStyle={threads.length === 0 ? styles.emptyWrap : styles.listContent}
+        initialNumToRender={10}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews
         ListEmptyComponent={
           <Text style={styles.empty}>No conversations yet.</Text>
         }
-        renderItem={({ item }) => (
-          <Pressable
-            style={[styles.row, shadow.card]}
-            onPress={() => openThread(item)}
-          >
-            <Image source={{ uri: item.productThumb }} style={styles.thumb} resizeMode="cover" />
-            <View style={styles.rowBody}>
-              <Text style={styles.rowTitle} numberOfLines={2}>
-                {item.productTitle}
-              </Text>
-              <Text style={styles.rowSub} numberOfLines={1}>
-                {item.lastMessageText || 'Chat'}
-              </Text>
-            </View>
-            <ChevronRight size={20} color={colors.textDim} />
-          </Pressable>
-        )}
       />
     </View>
   );

@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
+  FlatList,
   Image,
   ScrollView,
   StyleSheet,
@@ -50,6 +51,52 @@ const RECENT_CARD_W = W * 0.72;
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
+type HomeListingRowProps = {
+  ad: Ad;
+  width: number;
+  playingId: string | null;
+  isFavorite: boolean;
+  onTogglePlay: (id: string) => void;
+  onOpenDetail: (ad: Ad) => void;
+  onToggleFavorite: (ad: Ad) => void;
+  wrapStyle?: object;
+};
+
+const HomeListingRow = React.memo(function HomeListingRow({
+  ad,
+  width,
+  playingId,
+  isFavorite,
+  onTogglePlay,
+  onOpenDetail,
+  onToggleFavorite,
+  wrapStyle,
+}: HomeListingRowProps) {
+  const createdMs = adCreatedMs(ad);
+  const handleTogglePlay = useCallback(() => onTogglePlay(ad.id), [ad.id, onTogglePlay]);
+  const handleOpenDetail = useCallback(() => onOpenDetail(ad), [ad, onOpenDetail]);
+  const handleToggleFavorite = useCallback(
+    () => onToggleFavorite(ad),
+    [ad, onToggleFavorite],
+  );
+
+  return (
+    <View style={wrapStyle}>
+      <ListingVideoCard
+        ad={ad}
+        width={width}
+        isPlaying={playingId === ad.id}
+        onTogglePlay={handleTogglePlay}
+        showNewBadge={isNewAd(ad)}
+        relativeTimeLabel={formatRelativeTimeEn(createdMs)}
+        onOpenDetail={handleOpenDetail}
+        isFavorite={isFavorite}
+        onToggleFavorite={handleToggleFavorite}
+      />
+    </View>
+  );
+});
+
 function adCreatedMs(ad: Ad): number | null {
   return apiDateToMs(ad.createdAt);
 }
@@ -60,7 +107,12 @@ function isNewAd(ad: Ad): boolean {
   return Date.now() - ms < 3 * 24 * 60 * 60 * 1000;
 }
 
-export function HomeMarketplaceScreen() {
+type Props = {
+  /** When false, polling hooks pause (tab inactive in MainShell). */
+  isFocused?: boolean;
+};
+
+export function HomeMarketplaceScreen({ isFocused = true }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
@@ -74,36 +126,20 @@ export function HomeMarketplaceScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const { user } = useAuthUser();
-  const { ids: favoriteIds } = useFavoriteIds(user?.uid ?? null);
+  const { ids: favoriteIds } = useFavoriteIds(user?.uid ?? null, { enabled: isFocused });
+  const favoriteIdsRef = useRef(favoriteIds);
+  favoriteIdsRef.current = favoriteIds;
 
-  const onToggleFavorite = (ad: Ad) => {
-    if (!user) {
-      navigation.navigate('Auth', { mode: 'sign-in' });
-      return;
-    }
-    void toggleFavorite(ad, favoriteIds.has(ad.id)).catch(() => {
-      // Listener will reconcile; no UI rollback needed for this opt-in
-      // action.
-    });
-  };
-
-  const { ads, loading, error } = useAds({ category });
+  const { ads, loading, error } = useAds({ category, enabled: isFocused });
 
   useEffect(() => {
-    if (!user) {
-      setNotifications([]);
-      setUnreadCount(0);
+    if (!user || !isFocused) {
+      if (!user) {
+        setNotifications([]);
+        setUnreadCount(0);
+      }
       return;
     }
-    const load = async () => {
-      const [list, count] = await Promise.all([
-        fetchRecentNotifications(),
-        fetchUnreadNotificationsCount(),
-      ]);
-      setNotifications(list);
-      setUnreadCount(count);
-    };
-    void load();
     return createPoller(
       async () => {
         const [list, count] = await Promise.all([
@@ -119,7 +155,7 @@ export function HomeMarketplaceScreen() {
       undefined,
       15000,
     );
-  }, [user?.uid]);
+  }, [user?.uid, isFocused]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -140,21 +176,35 @@ export function HomeMarketplaceScreen() {
     return filtered.slice(12);
   }, [filtered]);
 
-  const gridRows = useMemo(() => {
-    const rows: Ad[][] = [];
-    for (let i = 0; i < recommendedAds.length; i += 2) {
-      rows.push(recommendedAds.slice(i, i + 2));
-    }
-    return rows;
-  }, [recommendedAds]);
+  const rootPadding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
 
-  const togglePlay = (id: string) => {
+  const onToggleFavorite = useCallback(
+    (ad: Ad) => {
+      if (!user) {
+        navigation.navigate('Auth', { mode: 'sign-in' });
+        return;
+      }
+      void toggleFavorite(ad, favoriteIdsRef.current.has(ad.id)).catch(() => {
+        // Listener will reconcile; no UI rollback needed for this opt-in action.
+      });
+    },
+    [user, navigation],
+  );
+
+  const togglePlay = useCallback((id: string) => {
     setPlayingId((p) => (p === id ? null : id));
-  };
+  }, []);
 
-  const publish = () => navigation.navigate('PostAd');
+  const onOpenDetail = useCallback(
+    (ad: Ad) => {
+      navigation.navigate('ProductDetail', { adId: ad.id, ad });
+    },
+    [navigation],
+  );
 
-  const onPressBell = () => {
+  const publish = useCallback(() => navigation.navigate('PostAd'), [navigation]);
+
+  const onPressBell = useCallback(() => {
     void (async () => {
       const unread = notifications.filter((n) => !n.read);
       await Promise.all(unread.map((n) => markNotificationRead(n.id)));
@@ -162,14 +212,59 @@ export function HomeMarketplaceScreen() {
       setUnreadCount(0);
       setNotificationsOpen(true);
     })();
-  };
+  }, [notifications]);
 
-  const onClearNotifications = () => {
+  const onClearNotifications = useCallback(() => {
     setNotifications([]);
-  };
+  }, []);
+
+  const openLanguage = useCallback(() => setLanguageOpen(true), []);
+  const closeLanguage = useCallback(() => setLanguageOpen(false), []);
+  const closeNotifications = useCallback(() => setNotificationsOpen(false), []);
+  const openAuth = useCallback(
+    () => navigation.navigate('Auth', { mode: 'sign-in' }),
+    [navigation],
+  );
+  const dismissPromo = useCallback(() => setPromoVisible(false), []);
+  const onSelectCategory = useCallback((id: CategoryId) => setCategory(id), []);
+
+  const renderRecentItem = useCallback(
+    ({ item }: { item: Ad }) => (
+      <HomeListingRow
+        ad={item}
+        width={RECENT_CARD_W}
+        playingId={playingId}
+        isFavorite={favoriteIds.has(item.id)}
+        onTogglePlay={togglePlay}
+        onOpenDetail={onOpenDetail}
+        onToggleFavorite={onToggleFavorite}
+        wrapStyle={styles.recentItemWrap}
+      />
+    ),
+    [playingId, favoriteIds, togglePlay, onOpenDetail, onToggleFavorite],
+  );
+
+  const renderGridItem = useCallback(
+    ({ item }: { item: Ad }) => (
+      <HomeListingRow
+        ad={item}
+        width={GRID_CARD_W}
+        playingId={playingId}
+        isFavorite={favoriteIds.has(item.id)}
+        onTogglePlay={togglePlay}
+        onOpenDetail={onOpenDetail}
+        onToggleFavorite={onToggleFavorite}
+        wrapStyle={styles.gridItemWrap}
+      />
+    ),
+    [playingId, favoriteIds, togglePlay, onOpenDetail, onToggleFavorite],
+  );
+
+  const recentKeyExtractor = useCallback((item: Ad) => item.id, []);
+  const gridKeyExtractor = useCallback((item: Ad) => item.id, []);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View style={[styles.root, rootPadding]}>
       <View style={styles.topRow}>
         <View style={styles.brandWrap}>
           <Image source={LOGO} style={styles.brandLogo} resizeMode="contain" />
@@ -186,7 +281,7 @@ export function HomeMarketplaceScreen() {
             {unreadCount > 0 ? <View style={styles.bellDot} /> : null}
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => setLanguageOpen(true)}
+            onPress={openLanguage}
             style={styles.langBtn}
             accessibilityLabel={t('language.accessibilityPicker')}
             accessibilityRole="button"
@@ -194,7 +289,7 @@ export function HomeMarketplaceScreen() {
             <Languages size={22} color={colors.marketplaceTitle} strokeWidth={1.75} />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Auth', { mode: 'sign-in' })}
+            onPress={openAuth}
             style={styles.avatar}
             accessibilityLabel={t('home.profile')}
           >
@@ -203,12 +298,12 @@ export function HomeMarketplaceScreen() {
         </View>
       </View>
 
-      <LanguagePickerModal visible={languageOpen} onClose={() => setLanguageOpen(false)} />
+      <LanguagePickerModal visible={languageOpen} onClose={closeLanguage} />
 
       <NotificationsModal
         visible={notificationsOpen}
         items={notifications}
-        onClose={() => setNotificationsOpen(false)}
+        onClose={closeNotifications}
         onClear={onClearNotifications}
       />
 
@@ -225,7 +320,7 @@ export function HomeMarketplaceScreen() {
 
         <PromoBanner
           visible={promoVisible}
-          onDismiss={() => setPromoVisible(false)}
+          onDismiss={dismissPromo}
           onPublish={publish}
         />
 
@@ -238,63 +333,47 @@ export function HomeMarketplaceScreen() {
         ) : (
           <>
             <Text style={styles.sectionTitle}>{t('sections.recent')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.hList}
-              nestedScrollEnabled
-            >
-              {recentAds.length === 0 ? (
-                <Text style={styles.empty}>{t('home.emptyListings')}</Text>
-              ) : (
-                recentAds.map((item) => (
-                  <View key={item.id} style={{ marginEnd: GRID_GAP }}>
-                    <ListingVideoCard
-                      ad={item}
-                      width={RECENT_CARD_W}
-                      isPlaying={playingId === item.id}
-                      onTogglePlay={() => togglePlay(item.id)}
-                      showNewBadge={isNewAd(item)}
-                      relativeTimeLabel={formatRelativeTimeEn(adCreatedMs(item))}
-                      onOpenDetail={() => navigation.navigate('ProductDetail', { adId: item.id })}
-                      isFavorite={favoriteIds.has(item.id)}
-                      onToggleFavorite={() => onToggleFavorite(item)}
-                    />
-                  </View>
-                ))
-              )}
-            </ScrollView>
+            {recentAds.length === 0 ? (
+              <Text style={styles.empty}>{t('home.emptyListings')}</Text>
+            ) : (
+              <FlatList
+                horizontal
+                data={recentAds}
+                keyExtractor={recentKeyExtractor}
+                renderItem={renderRecentItem}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.hList}
+                nestedScrollEnabled
+                initialNumToRender={4}
+                maxToRenderPerBatch={4}
+                windowSize={5}
+                removeClippedSubviews
+              />
+            )}
 
-            <PopularCategoriesSection onSelectCategory={(id) => setCategory(id)} />
+            <PopularCategoriesSection onSelectCategory={onSelectCategory} />
 
-            {gridRows.length > 0 ? (
+            {recommendedAds.length > 0 ? (
               <>
                 <Text style={styles.sectionTitle}>{t('sections.recommended')}</Text>
-                {gridRows.map((pair, ri) => (
-                  <View key={ri} style={styles.gridRow}>
-                    {pair.map((ad) => (
-                      <View key={ad.id} style={{ width: GRID_CARD_W }}>
-                        <ListingVideoCard
-                          ad={ad}
-                          width={GRID_CARD_W}
-                          isPlaying={playingId === ad.id}
-                          onTogglePlay={() => togglePlay(ad.id)}
-                          showNewBadge={isNewAd(ad)}
-                          relativeTimeLabel={formatRelativeTimeEn(adCreatedMs(ad))}
-                          onOpenDetail={() => navigation.navigate('ProductDetail', { adId: ad.id })}
-                          isFavorite={favoriteIds.has(ad.id)}
-                          onToggleFavorite={() => onToggleFavorite(ad)}
-                        />
-                      </View>
-                    ))}
-                    {pair.length === 1 ? <View style={{ flex: 1 }} /> : null}
-                  </View>
-                ))}
+                <FlatList
+                  data={recommendedAds}
+                  keyExtractor={gridKeyExtractor}
+                  renderItem={renderGridItem}
+                  numColumns={2}
+                  scrollEnabled={false}
+                  columnWrapperStyle={styles.gridRow}
+                  contentContainerStyle={styles.gridList}
+                  initialNumToRender={6}
+                  maxToRenderPerBatch={6}
+                  windowSize={5}
+                  removeClippedSubviews
+                />
               </>
             ) : null}
           </>
         )}
-        <View style={{ height: spacing.xxl + 8 }} />
+        <View style={styles.scrollFooter} />
       </ScrollView>
     </View>
   );
@@ -361,6 +440,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scrollContent: { paddingTop: spacing.sm },
+  scrollFooter: { height: spacing.xxl + 8 },
   catPad: { marginTop: spacing.sm },
   sectionTitle: {
     ...typography.title,
@@ -374,18 +454,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: H_PAD,
     paddingBottom: spacing.lg,
   },
-  gridRow: {
-    flexDirection: 'row',
-    gap: GRID_GAP,
+  recentItemWrap: { marginEnd: GRID_GAP },
+  gridList: {
     paddingHorizontal: H_PAD,
+    paddingBottom: spacing.md,
+  },
+  gridRow: {
+    gap: GRID_GAP,
     marginBottom: spacing.md,
   },
+  gridItemWrap: { flex: 1 },
   loader: { paddingVertical: spacing.xxl, alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg },
-  indexHint: {
-    ...typography.caption,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
   err: {
     ...typography.body,
     color: colors.danger,

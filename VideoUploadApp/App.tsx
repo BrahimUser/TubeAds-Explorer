@@ -1,18 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { I18nManager, StatusBar } from 'react-native';
+import { I18nManager, StatusBar, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, type Theme } from '@react-navigation/native';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { GOOGLE_WEB_CLIENT_ID, YOUTUBE_SCOPES } from './src/config/constants';
-import { AuthProvider } from './src/context/AuthContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { AuthProfileProvider } from './src/context/AuthProfileContext';
 import { RootStack } from './src/navigation/RootStack';
 import { SplashScreen } from './src/components/SplashScreen';
 import { colors, typography } from './src/theme';
 
-/** Minimum time the branded splash must stay on screen (ms). */
-const SPLASH_MIN_MS = 2200;
+/** Minimum branded splash duration when readiness finishes early (ms). */
+const SPLASH_MIN_MS = 400;
 
 const navigationTheme: Theme = {
   dark: false,
@@ -32,18 +30,32 @@ const navigationTheme: Theme = {
   },
 };
 
+function AppNavigation() {
+  const { initializing } = useAuth();
+
+  if (initializing) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <SplashScreen />
+      </View>
+    );
+  }
+
+  return (
+    <AuthProfileProvider>
+      <NavigationContainer
+        theme={navigationTheme}
+        direction={I18nManager.isRTL ? 'rtl' : 'ltr'}
+      >
+        <RootStack />
+      </NavigationContainer>
+    </AuthProfileProvider>
+  );
+}
+
 export default function App() {
   const [i18nReady, setI18nReady] = useState(false);
   const [minSplashElapsed, setMinSplashElapsed] = useState(false);
-
-  useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: GOOGLE_WEB_CLIENT_ID,
-      offlineAccess: true,
-      forceCodeForRefreshToken: false,
-      scopes: YOUTUBE_SCOPES,
-    });
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setMinSplashElapsed(true), SPLASH_MIN_MS);
@@ -71,28 +83,21 @@ export default function App() {
     };
   }, []);
 
-  const showSplash = !i18nReady || !minSplashElapsed;
+  const showBrandedSplash = !i18nReady || !minSplashElapsed;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar
           barStyle="dark-content"
-          backgroundColor={showSplash ? '#FFFFFF' : colors.bg}
+          backgroundColor={showBrandedSplash ? '#FFFFFF' : colors.bg}
           translucent={false}
         />
-        {showSplash ? (
+        {showBrandedSplash ? (
           <SplashScreen />
         ) : (
           <AuthProvider>
-            <AuthProfileProvider>
-              <NavigationContainer
-                theme={navigationTheme}
-                direction={I18nManager.isRTL ? 'rtl' : 'ltr'}
-              >
-                <RootStack />
-              </NavigationContainer>
-            </AuthProfileProvider>
+            <AppNavigation />
           </AuthProvider>
         )}
       </SafeAreaProvider>

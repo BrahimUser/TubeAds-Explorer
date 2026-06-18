@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Heart, HeartOff, Trash2 } from 'lucide-react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
@@ -25,15 +25,42 @@ import { cityLabel } from '../config/marketplace';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, radii, spacing, typography } from '../theme';
 import { formatPriceMad } from '../utils/formatPrice';
+import type { Ad } from '../types/Ad';
 
 type Nav = StackNavigationProp<RootStackParamList>;
+
+function favoriteItemsEqual(a: FavoriteItem[], b: FavoriteItem[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].adId !== b[i].adId || a[i].title !== b[i].title) return false;
+  }
+  return true;
+}
+
+function favoriteToAdSnapshot(item: FavoriteItem): Ad {
+  return {
+    id: item.adId,
+    title: item.title,
+    description: '',
+    priceCents: item.priceCents,
+    currency: item.currency,
+    category: '',
+    city: item.city,
+    youtubeVideoId: '',
+    thumbnailUrl: item.thumbnailUrl,
+    ownerUid: item.ownerUid,
+    status: 'approved',
+    createdAt: item.createdAtMs != null ? new Date(item.createdAtMs).toISOString() : null,
+  };
+}
 
 const W = Dimensions.get('window').width;
 const H_PAD = spacing.lg;
 const GRID_GAP = 12;
 const CARD_W = (W - H_PAD * 2 - GRID_GAP) / 2;
 
-export function FavoritesScreen() {
+export function FavoritesScreen({ isFocused = true }: { isFocused?: boolean }) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const { user, initializing } = useAuthUser();
@@ -50,7 +77,7 @@ export function FavoritesScreen() {
     try {
       setError(null);
       const next = await fetchFavorites();
-      setItems(next);
+      setItems((prev) => (favoriteItemsEqual(prev, next) ? prev : next));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -59,16 +86,18 @@ export function FavoritesScreen() {
   }, [user]);
 
   useEffect(() => {
-    if (!user) {
-      setItems([]);
-      setLoading(false);
+    if (!user || !isFocused) {
+      if (!user) {
+        setItems([]);
+        setLoading(false);
+      }
       return;
     }
     setLoading(true);
     return createPoller(
       () => fetchFavorites(),
       (next) => {
-        setItems(next);
+        setItems((prev) => (favoriteItemsEqual(prev, next) ? prev : next));
         setLoading(false);
       },
       (e) => {
@@ -77,16 +106,37 @@ export function FavoritesScreen() {
       },
       8000,
     );
-  }, [user?.uid]);
+  }, [user?.uid, isFocused]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (user) {
-        setLoading(true);
-        void refresh();
-      }
-    }, [user, refresh]),
+  const handleOpen = useCallback(
+    (item: FavoriteItem) => {
+      navigation.navigate('ProductDetail', {
+        adId: item.adId,
+        ad: favoriteToAdSnapshot(item),
+      });
+    },
+    [navigation],
   );
+
+  const handleRemove = useCallback(
+    (adId: string) => {
+      void removeFavorite(adId).then(() => refresh()).catch(() => {});
+    },
+    [refresh],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: FavoriteItem }) => (
+      <FavoriteCard
+        item={item}
+        onOpen={() => handleOpen(item)}
+        onRemove={() => handleRemove(item.adId)}
+      />
+    ),
+    [handleOpen, handleRemove],
+  );
+
+  const keyExtractor = useCallback((item: FavoriteItem) => item.adId, []);
 
   if (initializing) {
     return (
@@ -166,21 +216,15 @@ export function FavoritesScreen() {
       <Header count={items.length} />
       <FlatList
         data={items}
-        keyExtractor={(it) => it.adId}
+        keyExtractor={keyExtractor}
         numColumns={2}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <FavoriteCard
-            item={item}
-            onOpen={() =>
-              navigation.navigate('ProductDetail', { adId: item.adId })
-            }
-            onRemove={() => {
-              void removeFavorite(item.adId).then(() => refresh()).catch(() => {});
-            }}
-          />
-        )}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews
+        renderItem={renderItem}
       />
     </View>
   );
@@ -199,7 +243,7 @@ function Header({ count }: { count?: number }) {
   );
 }
 
-function FavoriteCard({
+const FavoriteCard = React.memo(function FavoriteCard({
   item,
   onOpen,
   onRemove,
@@ -247,7 +291,7 @@ function FavoriteCard({
       </View>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },

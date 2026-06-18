@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -15,7 +15,8 @@ import { ErrorBoundary } from '../ErrorBoundary';
 import { cityLabel } from '../../config/marketplace';
 import {
   createYoutubeCardNavigationHandler,
-  INLINE_YOUTUBE_PARAMS,
+  INLINE_YOUTUBE_PARAMS_LOOP,
+  YOUTUBE_CARD_WEBVIEW_PROPS,
 } from './youtubeCardShared';
 import { colors, radii, spacing, typography } from '../../theme';
 import type { Ad } from '../../types/Ad';
@@ -23,6 +24,8 @@ import { formatPriceMad } from '../../utils/formatPrice';
 
 const isWebViewAvailable: boolean =
   typeof WebView === 'function' || (typeof WebView === 'object' && WebView !== null);
+
+const EmptyFallback = () => <View />;
 
 type Props = {
   ad: Ad;
@@ -39,7 +42,7 @@ type Props = {
   onToggleFavorite?: () => void;
 };
 
-export function ListingVideoCard({
+function ListingVideoCardComponent({
   ad,
   width,
   isPlaying,
@@ -54,44 +57,51 @@ export function ListingVideoCard({
   const [ready, setReady] = useState(false);
   const videoHeight = width / (16 / 9);
   const onWebNav = useMemo(() => createYoutubeCardNavigationHandler(), []);
+  const onReady = useCallback(() => setReady(true), []);
+  const thumbnailSource = useMemo(
+    () => ({ uri: ad.thumbnailUrl }),
+    [ad.thumbnailUrl],
+  );
+  const webViewProps = useMemo(
+    () => ({
+      ...YOUTUBE_CARD_WEBVIEW_PROPS,
+      onShouldStartLoadWithRequest: onWebNav,
+    }),
+    [onWebNav],
+  );
 
   return (
     <View style={[styles.card, { width }]}>
       <Pressable onPress={onTogglePlay} style={[styles.mediaWrap, { height: videoHeight }]}>
         <Image
-          source={{ uri: ad.thumbnailUrl }}
+          source={thumbnailSource}
           style={StyleSheet.absoluteFill}
           resizeMode="cover"
         />
 
-        {isWebViewAvailable && (
-          <View style={[styles.playerLayer, !isPlaying && styles.playerHidden]}>
-            <ErrorBoundary resetKey={ad.youtubeVideoId} fallback={() => <View />}>
+        {isWebViewAvailable && isPlaying ? (
+          <View style={styles.playerLayer}>
+            <ErrorBoundary resetKey={ad.youtubeVideoId} fallback={EmptyFallback}>
               <YoutubePlayer
                 key={ad.id + ad.youtubeVideoId}
                 height={videoHeight}
                 width={width}
                 videoId={ad.youtubeVideoId}
-                play={isPlaying}
-                onReady={() => setReady(true)}
-                initialPlayerParams={{ ...INLINE_YOUTUBE_PARAMS, loop: true }}
+                play
+                onReady={onReady}
+                initialPlayerParams={INLINE_YOUTUBE_PARAMS_LOOP}
                 webViewStyle={styles.webView}
-                webViewProps={{
-                  androidLayerType: 'hardware',
-                  allowsInlineMediaPlayback: true,
-                  mediaPlaybackRequiresUserAction: false,
-                  onShouldStartLoadWithRequest: onWebNav,
-                }}
+                webViewProps={webViewProps}
               />
             </ErrorBoundary>
           </View>
-        )}
+        ) : null}
 
-        {isPlaying && isWebViewAvailable && !ready && (
+        {isPlaying && isWebViewAvailable && !ready ? (
           <View style={styles.spinner} pointerEvents="none">
             <ActivityIndicator color="#FFFFFF" />
           </View>
-        )}
+        ) : null}
 
         {showNewBadge ? (
           <View style={styles.newBadge}>
@@ -136,6 +146,28 @@ export function ListingVideoCard({
   );
 }
 
+function listingCardPropsEqual(prev: Props, next: Props): boolean {
+  return (
+    prev.ad.id === next.ad.id &&
+    prev.ad.title === next.ad.title &&
+    prev.ad.priceCents === next.ad.priceCents &&
+    prev.ad.thumbnailUrl === next.ad.thumbnailUrl &&
+    prev.ad.youtubeVideoId === next.ad.youtubeVideoId &&
+    prev.ad.currency === next.ad.currency &&
+    prev.ad.city === next.ad.city &&
+    prev.width === next.width &&
+    prev.isPlaying === next.isPlaying &&
+    prev.isFavorite === next.isFavorite &&
+    prev.showNewBadge === next.showNewBadge &&
+    prev.relativeTimeLabel === next.relativeTimeLabel &&
+    prev.onTogglePlay === next.onTogglePlay &&
+    prev.onOpenDetail === next.onOpenDetail &&
+    prev.onToggleFavorite === next.onToggleFavorite
+  );
+}
+
+export const ListingVideoCard = React.memo(ListingVideoCardComponent, listingCardPropsEqual);
+
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surfaceElevated,
@@ -159,10 +191,6 @@ const styles = StyleSheet.create({
   playerLayer: {
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
-  },
-  playerHidden: {
-    opacity: 0,
-    pointerEvents: 'none',
   },
   webView: { backgroundColor: '#000', opacity: 0.999 },
   spinner: {

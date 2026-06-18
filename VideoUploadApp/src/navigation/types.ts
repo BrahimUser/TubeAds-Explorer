@@ -15,13 +15,15 @@
  * Keeping route params here guarantees screens only depend on types — zero
  * runtime edge toward the navigator file.
  */
+import type { Ad } from '../types/Ad';
+
 export type RootStackParamList = {
   Main: undefined;
   PostAd: undefined;
   Auth: { mode?: 'sign-in' | 'sign-up' } | undefined;
-  ProductDetail: { adId: string };
-  Checkout: { adId: string };
-  Chat: { adId: string; sellerUid: string; threadId?: string };
+  ProductDetail: { adId: string; ad?: Ad };
+  Checkout: { adId: string; ad?: Ad };
+  Chat: { adId: string; sellerUid: string; threadId?: string; ad?: Ad };
   Orders: undefined;
   SellerDashboard: undefined;
   AdminDashboard: undefined;

@@ -1,7 +1,21 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import api, { clearTokens, getRefreshToken } from '../api/client';
+import { GOOGLE_WEB_CLIENT_ID, YOUTUBE_SCOPES } from '../config/constants';
 import { notifyAuthSignedOut } from '../types/AppUser';
 import { disconnectSocket } from './socket';
+
+let googleSignInConfigured = false;
+
+export function ensureGoogleSignInConfigured(): void {
+  if (googleSignInConfigured) return;
+  GoogleSignin.configure({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    offlineAccess: true,
+    forceCodeForRefreshToken: false,
+    scopes: YOUTUBE_SCOPES,
+  });
+  googleSignInConfigured = true;
+}
 
 /**
  * YouTube OAuth token for video uploads — independent of app authentication.
@@ -27,6 +41,7 @@ function wrapGoogleSignInConfigError(err: unknown): never {
 /** Returns a Google OAuth access token scoped for YouTube uploads. */
 export async function getYoutubeAccessToken(): Promise<string> {
   try {
+    ensureGoogleSignInConfigured();
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
     const current = GoogleSignin.getCurrentUser();

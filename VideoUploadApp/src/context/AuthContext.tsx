@@ -10,6 +10,7 @@ import api, { clearTokens, getAccessToken, getRefreshToken, unwrap } from '../ap
 import { disconnectSocket } from '../services/socket';
 import {
   notifyAuthSignedOut,
+  appUsersEqual,
   profileToAppUser,
   registerAuthSignOutListener,
   type AppUser,
@@ -37,7 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await api.get('/auth/me');
       const data = unwrap<{ user: Record<string, unknown> }>(res);
-      setUser(profileToAppUser(data.user ?? {}));
+      const next = profileToAppUser(data.user ?? {});
+      setUser((prev) => (appUsersEqual(prev, next) ? prev : next));
     } catch {
       await clearTokens();
       setUser(null);

@@ -28,3 +28,16 @@ export const INLINE_YOUTUBE_PARAMS = {
   rel: false,
   preventFullScreen: true,
 } as const;
+
+/** Stable player params for inline marketplace cards (loop enabled). */
+export const INLINE_YOUTUBE_PARAMS_LOOP = {
+  ...INLINE_YOUTUBE_PARAMS,
+  loop: true,
+} as const;
+
+/** Stable WebView props shared by marketplace YouTube cards. */
+export const YOUTUBE_CARD_WEBVIEW_PROPS = {
+  androidLayerType: 'hardware' as const,
+  allowsInlineMediaPlayback: true,
+  mediaPlaybackRequiresUserAction: false,
+};

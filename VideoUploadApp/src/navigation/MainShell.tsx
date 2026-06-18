@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -7,47 +7,101 @@ import {
   Home,
   MessageCircle,
   Plus,
-  Shield,
   User,
   type LucideIcon,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import { AdminDashboardScreen } from '../screens/AdminDashboardScreen';
-import { ChatInboxScreen } from '../screens/ChatInboxScreen';
-import { FavoritesScreen } from '../screens/FavoritesScreen';
-import { HomeMarketplaceScreen } from '../screens/HomeMarketplaceScreen';
-import { ProfileTabScreen } from '../screens/ProfileTabScreen';
-import { useIsAdmin } from '../hooks/useIsAdmin';
 import { colors } from '../theme';
 import type { RootStackParamList } from './types';
 
-type TabKey = 'home' | 'favorites' | 'messages' | 'admin' | 'profile';
+const HomeMarketplaceScreen = lazy(() =>
+  import('../screens/HomeMarketplaceScreen').then((m) => ({
+    default: m.HomeMarketplaceScreen,
+  })),
+);
+const FavoritesScreen = lazy(() =>
+  import('../screens/FavoritesScreen').then((m) => ({ default: m.FavoritesScreen })),
+);
+const ChatInboxScreen = lazy(() =>
+  import('../screens/ChatInboxScreen').then((m) => ({ default: m.ChatInboxScreen })),
+);
+const ProfileTabScreen = lazy(() =>
+  import('../screens/ProfileTabScreen').then((m) => ({ default: m.ProfileTabScreen })),
+);
+
+type TabKey = 'home' | 'favorites' | 'messages' | 'profile';
+
+function TabLoader() {
+  return (
+    <View style={styles.tabLoader}>
+      <ActivityIndicator color={colors.marketplaceOrange} size="large" />
+    </View>
+  );
+}
+
+function TabPanel({
+  visible,
+  children,
+}: {
+  visible: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={[styles.flex, !visible && styles.tabHidden]} pointerEvents={visible ? 'auto' : 'none'}>
+      {children}
+    </View>
+  );
+}
 
 export function MainShell() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const { isAdmin, ready: adminReady } = useIsAdmin();
   const [tab, setTab] = useState<TabKey>('home');
+  const [visited, setVisited] = useState<Set<TabKey>>(() => new Set(['home']));
 
   useEffect(() => {
-    if (adminReady && !isAdmin && tab === 'admin') {
-      setTab('home');
-    }
-  }, [adminReady, isAdmin, tab]);
+    setVisited((prev) => {
+      if (prev.has(tab)) return prev;
+      const next = new Set(prev);
+      next.add(tab);
+      return next;
+    });
+  }, [tab]);
 
   const goPublish = () => navigation.navigate('PostAd');
 
   return (
     <View style={styles.flex}>
-      {tab === 'home' && <HomeMarketplaceScreen />}
-      {tab === 'favorites' && <FavoritesScreen />}
-      {tab === 'messages' && <ChatInboxScreen />}
-      {tab === 'admin' && adminReady && isAdmin && (
-        <AdminDashboardScreen navigation={navigation} />
-      )}
-      {tab === 'profile' && <ProfileTabScreen />}
+      {visited.has('home') ? (
+        <TabPanel visible={tab === 'home'}>
+          <Suspense fallback={<TabLoader />}>
+            <HomeMarketplaceScreen isFocused={tab === 'home'} />
+          </Suspense>
+        </TabPanel>
+      ) : null}
+      {visited.has('favorites') ? (
+        <TabPanel visible={tab === 'favorites'}>
+          <Suspense fallback={<TabLoader />}>
+            <FavoritesScreen isFocused={tab === 'favorites'} />
+          </Suspense>
+        </TabPanel>
+      ) : null}
+      {visited.has('messages') ? (
+        <TabPanel visible={tab === 'messages'}>
+          <Suspense fallback={<TabLoader />}>
+            <ChatInboxScreen isFocused={tab === 'messages'} />
+          </Suspense>
+        </TabPanel>
+      ) : null}
+      {visited.has('profile') ? (
+        <TabPanel visible={tab === 'profile'}>
+          <Suspense fallback={<TabLoader />}>
+            <ProfileTabScreen />
+          </Suspense>
+        </TabPanel>
+      ) : null}
 
       <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
         <TabItem
@@ -113,6 +167,15 @@ function TabItem({
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
+  tabHidden: {
+    display: 'none',
+  },
+  tabLoader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bg,
+  },
   bar: {
     flexDirection: 'row',
     alignItems: 'flex-end',

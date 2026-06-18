@@ -53,9 +53,9 @@ function secondaryTagFromTitle(title: string): string {
 }
 
 export function ProductDetailScreen({ navigation, route }: Props) {
-  const { adId } = route.params;
+  const { adId, ad: adSnapshot } = route.params;
   const insets = useSafeAreaInsets();
-  const [ad, setAd] = useState<Ad | null>(null);
+  const [ad, setAd] = useState<Ad | null>(adSnapshot ?? null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
 
@@ -81,6 +81,12 @@ export function ProductDetailScreen({ navigation, route }: Props) {
   const load = useCallback(() => {
     let alive = true;
     setLoadError(null);
+    if (adSnapshot) {
+      setAd(adSnapshot);
+      return () => {
+        alive = false;
+      };
+    }
     setAd(null);
     void (async () => {
       try {
@@ -96,7 +102,7 @@ export function ProductDetailScreen({ navigation, route }: Props) {
     return () => {
       alive = false;
     };
-  }, [adId]);
+  }, [adId, adSnapshot]);
 
   React.useEffect(() => load(), [load]);
 
@@ -251,14 +257,14 @@ export function ProductDetailScreen({ navigation, route }: Props) {
         <Pressable
           style={({ pressed }) => [styles.btnOutline, pressed && { opacity: 0.9 }]}
           onPress={() =>
-            navigation.navigate('Chat', { adId: ad.id, sellerUid: ad.ownerUid })
+            navigation.navigate('Chat', { adId: ad.id, sellerUid: ad.ownerUid, ad })
           }
         >
           <Text style={styles.btnOutlineTxt}>Contact Seller</Text>
         </Pressable>
         <Pressable
           style={({ pressed }) => [styles.btnOrange, pressed && { opacity: 0.92 }]}
-          onPress={() => navigation.navigate('Checkout', { adId: ad.id })}
+          onPress={() => navigation.navigate('Checkout', { adId: ad.id, ad })}
         >
           <Text style={styles.btnOrangeTxt}>Order Now</Text>
         </Pressable>

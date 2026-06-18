@@ -46,7 +46,17 @@ export function AuthProfileProvider({ children }: { children: React.ReactNode })
       isAdmin,
       role,
     };
-  }, [user, initializing]);
+  }, [
+    user?.uid,
+    user?.phoneNumber,
+    user?.displayName,
+    user?.role,
+    user?.isPro,
+    user?.shopName,
+    user?.shopLogoUrl,
+    user?.shopDescription,
+    initializing,
+  ]);
 
   return <AuthProfileContext.Provider value={value}>{children}</AuthProfileContext.Provider>;
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -29,20 +29,53 @@ import type { ChatMessage } from '../types/Commerce';
 
 type Props = StackScreenProps<RootStackParamList, 'Chat'>;
 
+const Bubble = React.memo(function Bubble({
+  message,
+  isMine,
+}: {
+  message: ChatMessage;
+  isMine: boolean;
+}) {
+  return (
+    <View
+      style={[
+        styles.bubbleWrap,
+        isMine ? styles.bubbleMineWrap : styles.bubbleTheirWrap,
+      ]}
+    >
+      <View
+        style={[
+          styles.bubble,
+          shadow.card,
+          isMine ? styles.bubbleMine : styles.bubbleTheir,
+        ]}
+      >
+        {message.imageUrl ? (
+          <Image source={{ uri: message.imageUrl }} style={styles.bubbleImg} resizeMode="cover" />
+        ) : null}
+        <Text style={[styles.bubbleTxt, isMine && styles.bubbleTxtMine]}>
+          {message.text.trim()}
+        </Text>
+      </View>
+    </View>
+  );
+});
+
 export function ChatScreen({ navigation, route }: Props) {
-  const { adId, threadId: threadIdParam } = route.params;
+  const { adId, threadId: threadIdParam, ad: adSnapshot } = route.params;
   const insets = useSafeAreaInsets();
   const { user } = useAuthUser();
-  const [ad, setAd] = useState<Ad | null>(null);
+  const [ad, setAd] = useState<Ad | null>(adSnapshot ?? null);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!adSnapshot);
   const [sending, setSending] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const nearBottomRef = useRef(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!user?.uid) {
       navigation.replace('Auth', { mode: 'sign-in' });
       return;
     }
@@ -51,7 +84,7 @@ export function ChatScreen({ navigation, route }: Props) {
     setLoading(true);
     void (async () => {
       try {
-        const doc = await getAd(adId);
+        const doc = adSnapshot ?? (await getAd(adId));
         if (!alive) return;
         if (!doc) {
           Alert.alert('Error', 'Listing not found.');
@@ -66,7 +99,9 @@ export function ChatScreen({ navigation, route }: Props) {
             threadIdParam,
             (list) => {
               setMessages(list);
-              requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+              if (nearBottomRef.current) {
+                requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+              }
             },
             (e) => Alert.alert('Messages', e.message),
           );
@@ -78,7 +113,9 @@ export function ChatScreen({ navigation, route }: Props) {
             tid,
             (list) => {
               setMessages(list);
-              requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+              if (nearBottomRef.current) {
+                requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+              }
             },
             (e) => Alert.alert('Messages', e.message),
           );
@@ -93,11 +130,11 @@ export function ChatScreen({ navigation, route }: Props) {
       alive = false;
       unsubMsgs?.();
     };
-  }, [adId, user, navigation, threadIdParam]);
+  }, [adId, user?.uid, navigation, threadIdParam, adSnapshot]);
 
   const uid = user?.uid;
 
-  const onSend = async () => {
+  const onSend = useCallback(async () => {
     if (!threadId || !text.trim() || sending) return;
     setSending(true);
     try {
@@ -108,7 +145,16 @@ export function ChatScreen({ navigation, route }: Props) {
     } finally {
       setSending(false);
     }
-  };
+  }, [threadId, text, sending]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: ChatMessage }) => (
+      <Bubble message={item} isMine={item.senderUid === uid} />
+    ),
+    [uid],
+  );
+
+  const keyExtractor = useCallback((m: ChatMessage) => m.id, []);
 
   const onAttach = () => {
     Alert.alert(
@@ -141,7 +187,7 @@ export function ChatScreen({ navigation, route }: Props) {
     >
       <Pressable
         style={[styles.pinned, shadow.card]}
-        onPress={() => navigation.navigate('ProductDetail', { adId: ad.id })}
+        onPress={() => navigation.navigate('ProductDetail', { adId: ad.id, ad })}
       >
         <Image source={{ uri: ad.thumbnailUrl }} style={styles.pinnedImg} resizeMode="cover" />
         <View style={styles.pinnedBody}>
@@ -157,12 +203,24 @@ export function ChatScreen({ navigation, route }: Props) {
       <FlatList
         ref={listRef}
         data={messages}
-        keyExtractor={(m) => m.id}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-        renderItem={({ item }) => (
-          <Bubble message={item} isMine={item.senderUid === uid} />
-        )}
+        initialNumToRender={15}
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        removeClippedSubviews
+        onScroll={(e) => {
+          const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+          nearBottomRef.current =
+            contentOffset.y + layoutMeasurement.height >= contentSize.height - 80;
+        }}
+        scrollEventThrottle={100}
+        onContentSizeChange={() => {
+          if (nearBottomRef.current) {
+            listRef.current?.scrollToEnd({ animated: false });
+          }
+        }}
         ListEmptyComponent={
           <Text style={styles.empty}>Send a message to the seller.</Text>
         }
@@ -190,32 +248,6 @@ export function ChatScreen({ navigation, route }: Props) {
         </Pressable>
       </View>
     </KeyboardAvoidingView>
-  );
-}
-
-function Bubble({ message, isMine }: { message: ChatMessage; isMine: boolean }) {
-  return (
-    <View
-      style={[
-        styles.bubbleWrap,
-        isMine ? styles.bubbleMineWrap : styles.bubbleTheirWrap,
-      ]}
-    >
-      <View
-        style={[
-          styles.bubble,
-          shadow.card,
-          isMine ? styles.bubbleMine : styles.bubbleTheir,
-        ]}
-      >
-        {message.imageUrl ? (
-          <Image source={{ uri: message.imageUrl }} style={styles.bubbleImg} resizeMode="cover" />
-        ) : null}
-        <Text style={[styles.bubbleTxt, isMine && styles.bubbleTxtMine]}>
-          {message.text.trim()}
-        </Text>
-      </View>
-    </View>
   );
 }
 

@@ -19,13 +19,15 @@ import { approveListing, listenToPendingAds, rejectListing } from '../services/l
 import { colors, radii, shadow, spacing, typography } from '../theme';
 import type { Ad, Currency } from '../types/Ad';
 import { formatPriceMad } from '../utils/formatPrice';
+import { adsArraysEqual } from '../utils/shallowEqual';
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList>;
   route?: RouteProp<RootStackParamList, 'AdminDashboard'>;
+  isFocused?: boolean;
 };
 
-export function AdminDashboardScreen({ navigation }: Props) {
+export function AdminDashboardScreen({ navigation, isFocused = true }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuthUser();
   const { isAdmin, ready } = useIsAdmin();
@@ -42,15 +44,17 @@ export function AdminDashboardScreen({ navigation }: Props) {
       navigation.replace('Auth', { mode: 'sign-in' });
       return;
     }
-    if (!ready || !isAdmin) {
-      setItems([]);
-      setLoading(false);
+    if (!ready || !isAdmin || !isFocused) {
+      if (!ready || !isAdmin) {
+        setItems([]);
+        setLoading(false);
+      }
       return;
     }
     setLoading(true);
     const unsub = listenToPendingAds(
       (pending) => {
-        setItems(pending);
+        setItems((prev) => (adsArraysEqual(prev, pending) ? prev : pending));
         setLoading(false);
       },
       (e) => {
@@ -59,7 +63,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
       },
     );
     return unsub;
-  }, [user, ready, isAdmin, navigation]);
+  }, [user?.uid, ready, isAdmin, navigation, isFocused]);
 
   if (!user) {
     return (
@@ -104,45 +108,19 @@ export function AdminDashboardScreen({ navigation }: Props) {
           data={items}
           keyExtractor={(ad) => ad.id}
           contentContainerStyle={styles.listPad}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          removeClippedSubviews
           ListEmptyComponent={
             <Text style={styles.bodyMuted}>No listings waiting for moderation.</Text>
           }
           renderItem={({ item }) => (
-            <View style={[styles.card, shadow.card]}>
-              {!!item.thumbnailUrl && (
-                <Image source={{ uri: item.thumbnailUrl }} style={styles.thumb} />
-              )}
-              <Text style={styles.adTitle} numberOfLines={2}>
-                {item.title}
-              </Text>
-              <Text style={styles.price}>
-                {formatPriceMad(item.priceCents, item.currency as Currency)}
-              </Text>
-              <View style={styles.actions}>
-                <Pressable
-                  style={({ pressed }) => [styles.btn, styles.btnApprove, pressed && { opacity: 0.9 }]}
-                  disabled={!!busy}
-                  onPress={() => {
-                    runModeration(item.id, 'approve').catch(() => undefined);
-                  }}
-                >
-                  <Text style={styles.btnApproveTxt}>
-                    {busy === `${item.id}:approve` ? '…' : 'Approve'}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [styles.btn, styles.btnReject, pressed && { opacity: 0.9 }]}
-                  disabled={!!busy}
-                  onPress={() => {
-                    runModeration(item.id, 'reject').catch(() => undefined);
-                  }}
-                >
-                  <Text style={styles.btnRejectTxt}>
-                    {busy === `${item.id}:reject` ? '…' : 'Reject'}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
+            <ModerationCard
+              item={item}
+              busy={busy}
+              onModerate={runModeration}
+            />
           )}
         />
       )}
@@ -162,6 +140,50 @@ export function AdminDashboardScreen({ navigation }: Props) {
     }
   }
 }
+
+const ModerationCard = React.memo(function ModerationCard({
+  item,
+  busy,
+  onModerate,
+}: {
+  item: Ad;
+  busy: string | null;
+  onModerate: (adId: string, kind: 'approve' | 'reject') => void;
+}) {
+  return (
+    <View style={[styles.card, shadow.card]}>
+      {!!item.thumbnailUrl && (
+        <Image source={{ uri: item.thumbnailUrl }} style={styles.thumb} />
+      )}
+      <Text style={styles.adTitle} numberOfLines={2}>
+        {item.title}
+      </Text>
+      <Text style={styles.price}>
+        {formatPriceMad(item.priceCents, item.currency as Currency)}
+      </Text>
+      <View style={styles.actions}>
+        <Pressable
+          style={({ pressed }) => [styles.btn, styles.btnApprove, pressed && { opacity: 0.9 }]}
+          disabled={!!busy}
+          onPress={() => onModerate(item.id, 'approve')}
+        >
+          <Text style={styles.btnApproveTxt}>
+            {busy === `${item.id}:approve` ? '…' : 'Approve'}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.btn, styles.btnReject, pressed && { opacity: 0.9 }]}
+          disabled={!!busy}
+          onPress={() => onModerate(item.id, 'reject')}
+        >
+          <Text style={styles.btnRejectTxt}>
+            {busy === `${item.id}:reject` ? '…' : 'Reject'}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -63,10 +63,14 @@ export function SellerDashboardScreen({ navigation }: Props) {
   }, [navigation]);
 
   useEffect(() => {
-    if (!user) {
+    if (!user?.uid) {
       navigation.replace('Auth', { mode: 'sign-in' });
       return;
     }
+    if (topTab !== 'orders') {
+      return undefined;
+    }
+    setLoading(true);
     const unsub = listenSellerOrders(
       (list) => {
         setOrders(list);
@@ -78,12 +82,38 @@ export function SellerDashboardScreen({ navigation }: Props) {
       },
     );
     return unsub;
-  }, [user, navigation]);
+  }, [user?.uid, navigation, topTab]);
 
   const filteredOrders = useMemo(
     () => orders.filter((o) => orderMatchesSellerChip(o, statusChip)),
     [orders, statusChip],
   );
+
+  const renderOrderItem = useCallback(
+    ({ item }: { item: Order }) => (
+      <SellerOrderCard
+        order={item}
+        onViewDetails={() => navigation.navigate('SellerOrderDetail', { orderId: item.id })}
+        onConfirm={async () => {
+          try {
+            await sellerAdvanceOrder(item.id, 'confirm');
+          } catch (e) {
+            Alert.alert('Unable to confirm', String((e as Error)?.message ?? e));
+          }
+        }}
+        onMarkShipped={async () => {
+          try {
+            await sellerAdvanceOrder(item.id, 'mark_shipped');
+          } catch (e) {
+            Alert.alert('Unable to update', String((e as Error)?.message ?? e));
+          }
+        }}
+      />
+    ),
+    [navigation],
+  );
+
+  const orderKeyExtractor = useCallback((item: Order) => item.id, []);
 
   if (!user) {
     return (
@@ -179,33 +209,16 @@ export function SellerDashboardScreen({ navigation }: Props) {
           ) : (
             <FlatList
               data={filteredOrders}
-              keyExtractor={(item) => item.id}
+              keyExtractor={orderKeyExtractor}
+              renderItem={renderOrderItem}
               contentContainerStyle={styles.listPad}
+              initialNumToRender={8}
+              maxToRenderPerBatch={6}
+              windowSize={5}
+              removeClippedSubviews
               ListEmptyComponent={
                 <Text style={styles.empty}>No orders match this filter.</Text>
               }
-              renderItem={({ item }) => (
-                <SellerOrderCard
-                  order={item}
-                  onViewDetails={() =>
-                    navigation.navigate('SellerOrderDetail', { orderId: item.id })
-                  }
-                  onConfirm={async () => {
-                    try {
-                      await sellerAdvanceOrder(item.id, 'confirm');
-                    } catch (e) {
-                      Alert.alert('Unable to confirm', String((e as Error)?.message ?? e));
-                    }
-                  }}
-                  onMarkShipped={async () => {
-                    try {
-                      await sellerAdvanceOrder(item.id, 'mark_shipped');
-                    } catch (e) {
-                      Alert.alert('Unable to update', String((e as Error)?.message ?? e));
-                    }
-                  }}
-                />
-              )}
             />
           )}
         </>
@@ -214,7 +227,7 @@ export function SellerDashboardScreen({ navigation }: Props) {
   );
 }
 
-function SellerOrderCard({
+const SellerOrderCard = React.memo(function SellerOrderCard({
   order,
   onViewDetails,
   onConfirm,
@@ -274,7 +287,7 @@ function SellerOrderCard({
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },

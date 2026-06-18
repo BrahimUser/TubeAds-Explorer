@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -74,12 +74,19 @@ export function OrdersScreen() {
       },
     );
     return unsub;
-  }, [user, navigation]);
+  }, [user?.uid, navigation]);
 
   const filtered = useMemo(
     () => orders.filter((o) => orderMatchesBuyerTab(o, tab)),
     [orders, tab],
   );
+
+  const renderItem = useCallback(
+    ({ item }: { item: Order }) => <OrderRow item={item} navigation={navigation} />,
+    [navigation],
+  );
+
+  const keyExtractor = useCallback((item: Order) => item.id, []);
 
   if (!user) {
     return (
@@ -116,44 +123,58 @@ export function OrdersScreen() {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
           contentContainerStyle={styles.list}
+          initialNumToRender={10}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+          removeClippedSubviews
           ListEmptyComponent={
             <Text style={styles.empty}>No orders in this category.</Text>
           }
-          renderItem={({ item }) => (
-            <Pressable
-              style={[styles.rowCard, shadow.card]}
-              onPress={() => navigation.navigate('ProductDetail', { adId: item.adId })}
-            >
-              <Image source={{ uri: item.adThumbnailUrl }} style={styles.thumb} resizeMode="cover" />
-              <View style={styles.rowMid}>
-                <Text style={styles.rowTitle} numberOfLines={2}>
-                  {item.adTitle}
-                </Text>
-                <Text style={styles.rowSub}>
-                  {item.orderNumber}
-                  {orderDateShort(item) ? ` · ${orderDateShort(item)}` : ''}
-                </Text>
-                <View style={[styles.pill, { backgroundColor: statusTint(item.status).bg }]}>
-                  <Text style={[styles.pillTxt, { color: statusTint(item.status).fg }]}>
-                    {item.status}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.rowEnd}>
-                <Text style={styles.rowPrice}>
-                  {formatPriceMad(item.totalCents, item.currency as Currency)}
-                </Text>
-                <ChevronRight size={20} color={colors.textDim} />
-              </View>
-            </Pressable>
-          )}
         />
       )}
     </View>
   );
 }
+
+const OrderRow = React.memo(function OrderRow({
+  item,
+  navigation,
+}: {
+  item: Order;
+  navigation: StackNavigationProp<RootStackParamList>;
+}) {
+  const dateLabel = orderDateShort(item);
+  const tint = statusTint(item.status);
+  return (
+    <Pressable
+      style={[styles.rowCard, shadow.card]}
+      onPress={() => navigation.navigate('ProductDetail', { adId: item.adId })}
+    >
+      <Image source={{ uri: item.adThumbnailUrl }} style={styles.thumb} resizeMode="cover" />
+      <View style={styles.rowMid}>
+        <Text style={styles.rowTitle} numberOfLines={2}>
+          {item.adTitle}
+        </Text>
+        <Text style={styles.rowSub}>
+          {item.orderNumber}
+          {dateLabel ? ` · ${dateLabel}` : ''}
+        </Text>
+        <View style={[styles.pill, { backgroundColor: tint.bg }]}>
+          <Text style={[styles.pillTxt, { color: tint.fg }]}>{item.status}</Text>
+        </View>
+      </View>
+      <View style={styles.rowEnd}>
+        <Text style={styles.rowPrice}>
+          {formatPriceMad(item.totalCents, item.currency as Currency)}
+        </Text>
+        <ChevronRight size={20} color={colors.textDim} />
+      </View>
+    </Pressable>
+  );
+});
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },

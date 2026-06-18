@@ -11,13 +11,18 @@ export function createPoller<T>(
   intervalMs = 10000,
 ): () => void {
   let cancelled = false;
+  let inFlight = false;
 
   async function run() {
+    if (inFlight) return;
+    inFlight = true;
     try {
       const result = await fetchFn();
       if (!cancelled) onChange(result);
     } catch (err) {
       if (!cancelled) onError?.(err as Error);
+    } finally {
+      inFlight = false;
     }
   }
 

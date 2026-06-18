@@ -23,11 +23,11 @@ import { formatPriceMad } from '../utils/formatPrice';
 type Props = StackScreenProps<RootStackParamList, 'Checkout'>;
 
 export function CheckoutScreen({ navigation, route }: Props) {
-  const { adId } = route.params;
+  const { adId, ad: adSnapshot } = route.params;
   const insets = useSafeAreaInsets();
   const { user } = useAuthUser();
-  const [ad, setAd] = useState<Ad | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [ad, setAd] = useState<Ad | null>(adSnapshot ?? null);
+  const [loading, setLoading] = useState(!adSnapshot);
   const [submitting, setSubmitting] = useState(false);
 
   const [fullName, setFullName] = useState('');
@@ -39,6 +39,11 @@ export function CheckoutScreen({ navigation, route }: Props) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
 
   const load = useCallback(() => {
+    if (adSnapshot) {
+      setAd(adSnapshot);
+      setLoading(false);
+      return () => undefined;
+    }
     let alive = true;
     setLoading(true);
     void (async () => {
@@ -53,7 +58,7 @@ export function CheckoutScreen({ navigation, route }: Props) {
     return () => {
       alive = false;
     };
-  }, [adId]);
+  }, [adId, adSnapshot]);
 
   useEffect(() => load(), [load]);
 
