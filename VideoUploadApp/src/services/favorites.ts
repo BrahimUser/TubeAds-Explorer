@@ -1,6 +1,7 @@
 import type { Ad, Currency } from '../types/Ad';
 import type { CityId } from '../config/marketplace';
 import api, { getAccessToken, silentRequest, unwrap } from '../api/client';
+import { resolveDevServerUrl } from '../config/api';
 import { apiDateToMs } from '../utils/apiMappers';
 
 export type FavoriteItem = {
@@ -21,7 +22,7 @@ function parseFavorite(raw: Record<string, unknown>): FavoriteItem {
     title: String(raw.title ?? ''),
     priceCents: Number(raw.priceCents) || 0,
     currency: (raw.currency as Currency) ?? 'MAD',
-    thumbnailUrl: String(raw.thumbnailUrl ?? ''),
+    thumbnailUrl: resolveDevServerUrl(String(raw.thumbnailUrl ?? '')),
     city: (raw.city as CityId) ?? 'casablanca',
     ownerUid: String(raw.ownerUid ?? raw.ownerId ?? ''),
     createdAtMs: apiDateToMs(raw.createdAt as string | null),

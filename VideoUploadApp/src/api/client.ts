@@ -13,6 +13,7 @@ export const silentRequest = { skipGlobalLoading: true } as AxiosRequestConfig;
 const api = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 15_000,
 });
 
 api.interceptors.request.use(async (config) => {
@@ -73,10 +74,14 @@ export function mapApiError(err: unknown): string {
   const ax = err as {
     response?: { data?: { message?: string; errors?: { message: string }[] } };
     message?: string;
+    code?: string;
   };
   const msg = ax?.response?.data?.message;
   const errors = ax?.response?.data?.errors;
   if (errors?.length) return errors.map((e) => e.message).join(' ');
+  if (ax?.message === 'Network Error' || ax?.code === 'ECONNABORTED') {
+    return `Cannot reach the API at ${API_URL}. Run the backend, then \`npm run android:reverse\` if using USB.`;
+  }
   return msg || ax?.message || 'Something went wrong. Please try again.';
 }
 

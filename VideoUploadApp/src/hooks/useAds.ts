@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CategoryId } from '../config/marketplace';
 import { listenToAds } from '../services/listings';
+import { mapApiError } from '../api/client';
 import type { Ad } from '../types/Ad';
 
 /**
@@ -27,7 +28,7 @@ export function useAds(options?: { category?: CategoryId | null }): {
         setError(null);
       },
       (err) => {
-        setError(err);
+        setError(new Error(mapApiError(err)));
         setLoading(false);
       },
       category ? { category } : undefined,

@@ -3,6 +3,7 @@ import type { CategoryId } from '../config/marketplace';
 import { categoryFirestoreValue } from '../config/marketplace';
 import { applyListingReadCoercions } from '../utils/listingDocNormalize';
 import api, { silentRequest, unwrap } from '../api/client';
+import { resolveDevServerUrl } from '../config/api';
 import { createPoller } from '../hooks/usePolling';
 
 function extractYoutubeVideoId(candidate: string): string {
@@ -28,9 +29,10 @@ function parseAd(id: string, raw: Record<string, unknown>): Ad {
     extractYoutubeVideoId(rawVideoUrl) ||
     '';
 
-  const thumbnailUrl =
+  const rawThumbnail =
     (typeof raw.thumbnailUrl === 'string' && raw.thumbnailUrl) ||
     (youtubeVideoId ? `https://i.ytimg.com/vi/${youtubeVideoId}/hqdefault.jpg` : '');
+  const thumbnailUrl = resolveDevServerUrl(rawThumbnail);
 
   const base: Ad = {
     id,

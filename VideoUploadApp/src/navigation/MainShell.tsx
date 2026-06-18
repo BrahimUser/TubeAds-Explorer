@@ -78,14 +78,6 @@ export function MainShell() {
           active={tab === 'messages'}
           onPress={() => setTab('messages')}
         />
-        {adminReady && isAdmin && (
-          <TabItem
-            label={t('tabs.admin')}
-            Icon={Shield}
-            active={tab === 'admin'}
-            onPress={() => setTab('admin')}
-          />
-        )}
         <TabItem
           label={t('tabs.profile')}
           Icon={User}
