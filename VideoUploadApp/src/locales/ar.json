@@ -51,7 +51,45 @@
     "notifications": "الإشعارات",
     "profile": "الملف الشخصي",
     "filters": "عوامل التصفية",
-    "promoDismiss": "إغلاق العرض"
+    "promoDismiss": "إغلاق العرض",
+    "tagline": "إعلانات فيديو في جميع أنحاء المغرب — اشترِ وبيع بثقة",
+    "greetingSignedIn": "مرحبًا بعودتك",
+    "greetingGuest": "اكتشف عروضًا قريبة منك",
+    "promoBadge": "نشر مجاني",
+    "stats": {
+      "title": "نظرة سريعة",
+      "listings": "إعلانات نشطة",
+      "newThisWeek": "جديد هذا الأسبوع",
+      "cities": "مدن مغطاة",
+      "categories": "فئات",
+      "listingsShort": "إعلانات",
+      "newShort": "جديد",
+      "citiesShort": "مدن",
+      "categoriesShort": "فئات"
+    },
+    "quickActions": {
+      "sell": "بيع",
+      "favorites": "المفضلة",
+      "messages": "محادثة",
+      "browse": "تصفح"
+    },
+    "trust": {
+      "video": "معاينة بالفيديو",
+      "videoDesc": "شاهد المنتج قبل الشراء",
+      "local": "بائعون محليون",
+      "localDesc": "إعلانات في جميع أنحاء المغرب",
+      "chat": "دردشة داخل التطبيق",
+      "chatDesc": "راسل البائعين مباشرة"
+    },
+    "topCities": "أبرز المدن",
+    "topCitiesSubtitle": "أكثر المناطق نشاطًا",
+    "popularSubtitle": "تصفح حسب الفئة",
+    "recentSubtitle": "{{count}} إعلانًا جديدًا",
+    "recommendedSubtitle": "المزيد من الاختيارات لك",
+    "showingCategory": "عرض {{category}}",
+    "showingCity": "عرض {{city}}",
+    "clearFilter": "مسح",
+    "listingsCount": "{{count}} إعلانًا"
   },
   "account": {
     "title": "الحساب",

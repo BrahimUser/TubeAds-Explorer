@@ -51,7 +51,45 @@
     "notifications": "Notifications",
     "profile": "Profil",
     "filters": "Filtres",
-    "promoDismiss": "Fermer la promo"
+    "promoDismiss": "Fermer la promo",
+    "tagline": "Annonces vidéo partout au Maroc — achetez et vendez en confiance",
+    "greetingSignedIn": "Bon retour",
+    "greetingGuest": "Découvrez des offres près de chez vous",
+    "promoBadge": "GRATUIT",
+    "stats": {
+      "title": "En bref",
+      "listings": "Annonces actives",
+      "newThisWeek": "Nouvelles cette semaine",
+      "cities": "Villes couvertes",
+      "categories": "Catégories",
+      "listingsShort": "Annonces",
+      "newShort": "Nouveau",
+      "citiesShort": "Villes",
+      "categoriesShort": "Catég."
+    },
+    "quickActions": {
+      "sell": "Vendre",
+      "favorites": "Favoris",
+      "messages": "Messages",
+      "browse": "Parcourir"
+    },
+    "trust": {
+      "video": "Aperçus vidéo",
+      "videoDesc": "Voyez les articles avant d’acheter",
+      "local": "Vendeurs locaux",
+      "localDesc": "Annonces dans tout le Maroc",
+      "chat": "Chat intégré",
+      "chatDesc": "Contactez les vendeurs directement"
+    },
+    "topCities": "Villes populaires",
+    "topCitiesSubtitle": "Où les annonces sont les plus actives",
+    "popularSubtitle": "Parcourir par catégorie",
+    "recentSubtitle": "{{count}} annonces récentes",
+    "recommendedSubtitle": "D’autres suggestions pour vous",
+    "showingCategory": "Affichage : {{category}}",
+    "showingCity": "Affichage : {{city}}",
+    "clearFilter": "Effacer",
+    "listingsCount": "{{count}} annonces"
   },
   "account": {
     "title": "Compte",
