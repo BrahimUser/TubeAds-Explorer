@@ -17,8 +17,10 @@
  */
 import type { Ad } from '../types/Ad';
 
+export type MainTabKey = 'home' | 'favorites' | 'messages' | 'profile';
+
 export type RootStackParamList = {
-  Main: undefined;
+  Main: { tab?: MainTabKey } | undefined;
   PostAd: undefined;
   Auth: { mode?: 'sign-in' | 'sign-up' } | undefined;
   ProductDetail: { adId: string; ad?: Ad };

@@ -10,10 +10,10 @@ import {
   User,
   type LucideIcon,
 } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { colors } from '../theme';
-import type { RootStackParamList } from './types';
+import type { MainTabKey, RootStackParamList } from './types';
 
 const HomeMarketplaceScreen = lazy(() =>
   import('../screens/HomeMarketplaceScreen').then((m) => ({
@@ -30,7 +30,7 @@ const ProfileTabScreen = lazy(() =>
   import('../screens/ProfileTabScreen').then((m) => ({ default: m.ProfileTabScreen })),
 );
 
-type TabKey = 'home' | 'favorites' | 'messages' | 'profile';
+type TabKey = MainTabKey;
 
 function TabLoader() {
   return (
@@ -58,8 +58,21 @@ export function MainShell() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'Main'>>();
   const [tab, setTab] = useState<TabKey>('home');
   const [visited, setVisited] = useState<Set<TabKey>>(() => new Set(['home']));
+
+  useEffect(() => {
+    const nextTab = route.params?.tab;
+    if (!nextTab) return;
+    setTab(nextTab);
+    setVisited((prev) => {
+      if (prev.has(nextTab)) return prev;
+      const next = new Set(prev);
+      next.add(nextTab);
+      return next;
+    });
+  }, [route.params?.tab]);
 
   useEffect(() => {
     setVisited((prev) => {
