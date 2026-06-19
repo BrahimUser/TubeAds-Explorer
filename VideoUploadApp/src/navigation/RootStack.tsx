@@ -16,6 +16,7 @@ const MainShellScreen = lazy(() =>
 const PostAdScreen = lazy(() => import('../screens/PostAdScreen'));
 const AuthScreen = lazy(() => import('../screens/AuthScreen'));
 const ProductDetailScreen = lazy(() => import('../screens/ProductDetailScreen'));
+const SellerProfileScreen = lazy(() => import('../screens/SellerProfileScreen'));
 const CheckoutScreen = lazy(() => import('../screens/CheckoutScreen'));
 const ChatScreen = lazy(() => import('../screens/ChatScreen'));
 const OrdersScreen = lazy(() => import('../screens/OrdersScreen'));
@@ -83,6 +84,11 @@ export function RootStack() {
         <Stack.Screen
           name="ProductDetail"
           component={ProductDetailScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="SellerProfile"
+          component={SellerProfileScreen}
           options={{ headerShown: false }}
         />
         <Stack.Screen

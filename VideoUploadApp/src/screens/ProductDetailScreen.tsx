@@ -19,7 +19,6 @@ import {
   Heart,
   MapPin,
   Share2,
-  Star,
 } from 'lucide-react-native';
 import type { StackScreenProps } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +28,8 @@ import { getAd } from '../services/listings';
 import { toggleFavorite } from '../services/favorites';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { useFavoriteIds } from '../hooks/useFavoriteIds';
+import { useSellerProfile } from '../hooks/useSellerProfile';
+import { sellerDisplayName } from '../services/users';
 import { colors, radii, shadow, spacing, typography } from '../theme';
 import type { Ad } from '../types/Ad';
 import { formatPriceMad } from '../utils/formatPrice';
@@ -61,6 +62,7 @@ export function ProductDetailScreen({ navigation, route }: Props) {
 
   const { user } = useAuthUser();
   const { ids: favoriteIds } = useFavoriteIds(user?.uid ?? null);
+  const { seller, loading: sellerLoading } = useSellerProfile(ad?.ownerUid);
   const favorited = favoriteIds.has(adId);
 
   const onToggleFavorite = () => {
@@ -150,6 +152,11 @@ export function ProductDetailScreen({ navigation, route }: Props) {
   const desc = ad.description?.trim() ?? '';
   const descLong = desc.length > 160;
   const descShown = descExpanded || !descLong ? desc : `${desc.slice(0, 160)}…`;
+  const sellerName = sellerDisplayName(seller, ad.ownerUid);
+  const openSellerProfile = () => {
+    if (!ad.ownerUid) return;
+    navigation.navigate('SellerProfile', { sellerId: ad.ownerUid });
+  };
 
   return (
     <View style={styles.root}>
@@ -228,28 +235,42 @@ export function ProductDetailScreen({ navigation, route }: Props) {
           ) : null}
 
           <Text style={styles.sectionLabel}>Seller Information</Text>
-          <View style={[styles.sellerCard, shadow.card]}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.sellerCard,
+              shadow.card,
+              pressed && { opacity: 0.92 },
+            ]}
+            onPress={openSellerProfile}
+            disabled={!ad.ownerUid}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${sellerName} profile`}
+          >
             <View style={styles.sellerAvatar}>
-              <Text style={styles.sellerAvatarTxt}>
-                {(ad.ownerUid || '?').slice(0, 1).toUpperCase()}
-              </Text>
+              {seller?.shopLogoUrl ? (
+                <Image source={{ uri: seller.shopLogoUrl }} style={styles.sellerAvatarImg} resizeMode="cover" />
+              ) : (
+                <Text style={styles.sellerAvatarTxt}>
+                  {(sellerName[0] || '?').toUpperCase()}
+                </Text>
+              )}
             </View>
             <View style={styles.sellerBody}>
               <View style={styles.sellerTop}>
-                <Text style={styles.sellerName}>Verified seller</Text>
-                <View style={styles.verified}>
-                  <BadgeCheck size={16} color={colors.marketplaceOrange} strokeWidth={2} />
-                  <Text style={styles.verifiedTxt}>Verified</Text>
-                </View>
+                <Text style={styles.sellerName} numberOfLines={1}>
+                  {sellerLoading ? 'Loading seller…' : sellerName}
+                </Text>
+                {seller?.isPro ? (
+                  <View style={styles.verified}>
+                    <BadgeCheck size={16} color={colors.marketplaceOrange} strokeWidth={2} />
+                    <Text style={styles.verifiedTxt}>Pro</Text>
+                  </View>
+                ) : null}
               </View>
-              <View style={styles.ratingRow}>
-                <Star size={14} color="#F59E0B" fill="#F59E0B" strokeWidth={0} />
-                <Text style={styles.ratingTxt}>4.9</Text>
-                <Text style={styles.ratingCount}>(128 reviews)</Text>
-              </View>
+              <Text style={styles.sellerSubtitle}>Seller on marketplace</Text>
             </View>
             <ChevronRight size={20} color={colors.textDim} strokeWidth={2} />
-          </View>
+          </Pressable>
         </View>
       </ScrollView>
 
@@ -357,20 +378,48 @@ const styles = StyleSheet.create({
     backgroundColor: '#E4E4E7',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  sellerAvatarImg: { width: '100%', height: '100%' },
   sellerAvatarTxt: { fontSize: 18, fontWeight: '800', color: colors.textMuted },
   sellerBody: { flex: 1, gap: 4 },
   sellerTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
-  sellerName: { ...typography.title, fontSize: 15, color: colors.marketplaceTitle },
+  sellerName: { ...typography.title, fontSize: 15, color: colors.marketplaceTitle, flexShrink: 1 },
+  sellerSubtitle: { ...typography.caption, color: colors.textMuted },
   verified: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   verifiedTxt: {
     ...typography.caption,
     color: colors.marketplaceOrange,
     fontWeight: '700',
   },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  ratingTxt: { ...typography.caption, fontWeight: '700', color: colors.text },
-  ratingCount: { ...typography.caption, color: colors.textDim },
+  viewSellerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 2,
+    borderColor: colors.marketplaceOrange,
+    backgroundColor: colors.surfaceElevated,
+  },
+  viewSellerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E4E4E7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  viewSellerInitial: { fontSize: 15, fontWeight: '800', color: colors.textMuted },
+  viewSellerName: {
+    ...typography.title,
+    fontSize: 14,
+    color: colors.marketplaceOrange,
+    flex: 1,
+  },
   bottomBar: {
     position: 'absolute',
     left: 0,

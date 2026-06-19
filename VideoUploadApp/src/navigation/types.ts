@@ -22,6 +22,7 @@ export type RootStackParamList = {
   PostAd: undefined;
   Auth: { mode?: 'sign-in' | 'sign-up' } | undefined;
   ProductDetail: { adId: string; ad?: Ad };
+  SellerProfile: { sellerId: string };
   Checkout: { adId: string; ad?: Ad };
   Chat: { adId: string; sellerUid: string; threadId?: string; ad?: Ad };
   Orders: undefined;
