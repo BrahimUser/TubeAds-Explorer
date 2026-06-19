@@ -26,12 +26,31 @@ function parseThread(raw: Record<string, unknown>): ChatThread {
 function parseMessage(threadId: string, raw: Record<string, unknown>): ChatMessage {
   return {
     id: String(raw.id ?? ''),
-    threadId,
+    threadId: String(raw.threadId ?? threadId),
     senderUid: String(raw.senderUid ?? raw.senderId ?? ''),
     text: String(raw.text ?? ''),
     imageUrl: (raw.imageUrl as string | null) ?? null,
     createdAt: (raw.createdAt as string | null) ?? null,
   };
+}
+
+function sortThreads(threads: ChatThread[]): ChatThread[] {
+  return threads.slice().sort((a, b) => {
+    const ta = new Date(a.lastMessageAt || a.createdAt || 0).getTime();
+    const tb = new Date(b.lastMessageAt || b.createdAt || 0).getTime();
+    return tb - ta;
+  });
+}
+
+function upsertThread(threads: ChatThread[], updated: Record<string, unknown>): ChatThread[] {
+  const parsed = parseThread(updated);
+  const idx = threads.findIndex((t) => t.id === parsed.id);
+  if (idx >= 0) {
+    const next = threads.slice();
+    next[idx] = { ...next[idx], ...parsed };
+    return sortThreads(next);
+  }
+  return sortThreads([parsed, ...threads]);
 }
 
 async function requireAuth(): Promise<void> {
@@ -54,12 +73,52 @@ export function listenChatThreads(
   if (options?.enabled === false) {
     return () => undefined;
   }
-  return createPoller(
+
+  let cancelled = false;
+  let threads: ChatThread[] = [];
+  let socketCleanup: (() => void) | undefined;
+
+  const emitChange = (list: ChatThread[]) => {
+    threads = sortThreads(list);
+    if (!cancelled) onChange(threads);
+  };
+
+  const pollCleanup = createPoller(
     () => fetchChatThreads(),
-    onChange,
+    emitChange,
     onError,
     5000,
   );
+
+  void (async () => {
+    const socket = await getSocket();
+    if (cancelled || !socket) return;
+
+    const onThreadUpdated = (updated: Record<string, unknown>) => {
+      if (!updated?.id) return;
+      emitChange(upsertThread(threads, updated));
+    };
+
+    const onConnectError = () => {
+      void fetchChatThreads()
+        .then(emitChange)
+        .catch((err) => onError(err as Error));
+    };
+
+    socket.on('chat:thread_updated', onThreadUpdated);
+    socket.on('connect_error', onConnectError);
+
+    socketCleanup = () => {
+      socket.off('chat:thread_updated', onThreadUpdated);
+      socket.off('connect_error', onConnectError);
+    };
+  })();
+
+  return () => {
+    cancelled = true;
+    pollCleanup();
+    socketCleanup?.();
+  };
 }
 
 export async function fetchThreadMessages(threadId: string): Promise<ChatMessage[]> {
@@ -77,12 +136,18 @@ export function listenThreadMessages(
   let cancelled = false;
   let pollCleanup: (() => void) | undefined;
   let socketCleanup: (() => void) | undefined;
+  let messages: ChatMessage[] = [];
+
+  const emitChange = (list: ChatMessage[]) => {
+    messages = list;
+    if (!cancelled) onChange(list);
+  };
 
   const startPolling = () => {
     if (pollCleanup || cancelled) return;
     pollCleanup = createPoller(
       () => fetchThreadMessages(threadId),
-      onChange,
+      emitChange,
       onError,
       5000,
     );
@@ -93,6 +158,14 @@ export function listenThreadMessages(
     pollCleanup = undefined;
   };
 
+  void fetchThreadMessages(threadId)
+    .then((list) => {
+      if (!cancelled) emitChange(list);
+    })
+    .catch((err) => {
+      if (!cancelled) onError(err as Error);
+    });
+
   void (async () => {
     const socket = await getSocket();
     if (cancelled) return;
@@ -102,33 +175,45 @@ export function listenThreadMessages(
       return;
     }
 
-    socket.emit('chat:join_thread', { threadId });
-    const onMessage = (payload: { threadId?: string }) => {
-      if (payload?.threadId === threadId) {
-        void fetchThreadMessages(threadId)
-          .then((list) => {
-            if (!cancelled) onChange(list);
-          })
-          .catch((err) => onError(err as Error));
-      }
+    const joinThread = () => {
+      socket.emit('chat:join_thread', threadId, (res?: { ok?: boolean }) => {
+        if (!res?.ok && !cancelled) {
+          void fetchThreadMessages(threadId)
+            .then(emitChange)
+            .catch((err) => onError(err as Error));
+        }
+      });
     };
-    socket.on('chat:message', onMessage);
 
-    const onConnect = () => stopPolling();
+    const appendMessage = (raw: Record<string, unknown>) => {
+      if (String(raw.threadId ?? '') !== threadId) return;
+      const parsed = parseMessage(threadId, raw);
+      const next = messages.some((m) => m.id === parsed.id)
+        ? messages
+        : [...messages, parsed];
+      emitChange(next);
+    };
+
+    const onConnect = () => {
+      joinThread();
+      stopPolling();
+    };
     const onDisconnect = () => startPolling();
 
+    socket.on('chat:message', appendMessage);
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
 
     if (socket.connected) {
+      joinThread();
       stopPolling();
     } else {
       startPolling();
     }
 
     socketCleanup = () => {
-      socket.emit('chat:leave_thread', { threadId });
-      socket.off('chat:message', onMessage);
+      socket.emit('chat:leave_thread', threadId);
+      socket.off('chat:message', appendMessage);
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
     };
