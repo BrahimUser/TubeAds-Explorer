@@ -221,10 +221,19 @@ export function HomeMarketplaceScreen({ isFocused = true }: Props) {
   const openLanguage = useCallback(() => setLanguageOpen(true), []);
   const closeLanguage = useCallback(() => setLanguageOpen(false), []);
   const closeNotifications = useCallback(() => setNotificationsOpen(false), []);
-  const openAuth = useCallback(
-    () => navigation.navigate('Auth', { mode: 'sign-in' }),
-    [navigation],
-  );
+  const openProfile = useCallback(() => {
+    if (user) {
+      navigation.navigate('Main', { tab: 'profile' });
+      return;
+    }
+    navigation.navigate('Auth', { mode: 'sign-in' });
+  }, [user, navigation]);
+
+  const profileAvatarLetter = useMemo(() => {
+    if (!user) return null;
+    const label = user.shopName?.trim() || user.displayName?.trim() || 'U';
+    return label.charAt(0).toUpperCase();
+  }, [user]);
   const dismissPromo = useCallback(() => setPromoVisible(false), []);
   const onSelectCategory = useCallback((id: CategoryId) => setCategory(id), []);
 
@@ -289,11 +298,17 @@ export function HomeMarketplaceScreen({ isFocused = true }: Props) {
             <Languages size={22} color={colors.marketplaceTitle} strokeWidth={1.75} />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={openAuth}
+            onPress={openProfile}
             style={styles.avatar}
             accessibilityLabel={t('home.profile')}
           >
-            <UserRound size={22} color={colors.marketplaceTitle} strokeWidth={1.75} />
+            {user?.shopLogoUrl ? (
+              <Image source={{ uri: user.shopLogoUrl }} style={styles.avatarImg} resizeMode="cover" />
+            ) : user && profileAvatarLetter ? (
+              <Text style={styles.avatarLetter}>{profileAvatarLetter}</Text>
+            ) : (
+              <UserRound size={22} color={colors.marketplaceTitle} strokeWidth={1.75} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -438,6 +453,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: { width: '100%', height: '100%' },
+  avatarLetter: {
+    ...typography.title,
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.marketplaceTitle,
   },
   scrollContent: { paddingTop: spacing.sm },
   scrollFooter: { height: spacing.xxl + 8 },
