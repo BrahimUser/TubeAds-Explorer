@@ -94,5 +94,16 @@
   "favorites": {
     "comingSoonSubtitle": "Coming soon."
   },
+  "messagesInbox": {
+    "title": "Messages",
+    "subtitle": "Chats with buyers and sellers about your listings",
+    "roleBuying": "Buying",
+    "roleSelling": "Selling",
+    "signedOutTitle": "Sign in to view messages",
+    "signedOutBody": "Message sellers about listings, negotiate prices, and keep every conversation in one place.",
+    "emptyTitle": "No conversations yet",
+    "emptyBody": "Tap \"Contact seller\" on a listing to start chatting. Your threads will appear here.",
+    "browseListings": "Browse listings"
+  },
   "newBadge": "New"
 }

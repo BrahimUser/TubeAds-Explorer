@@ -94,5 +94,16 @@
   "favorites": {
     "comingSoonSubtitle": "Bientôt disponible."
   },
+  "messagesInbox": {
+    "title": "Messages",
+    "subtitle": "Discussions avec acheteurs et vendeurs sur vos annonces",
+    "roleBuying": "Achat",
+    "roleSelling": "Vente",
+    "signedOutTitle": "Connectez-vous pour voir vos messages",
+    "signedOutBody": "Contactez les vendeurs, négociez les prix et retrouvez toutes vos conversations au même endroit.",
+    "emptyTitle": "Aucune conversation",
+    "emptyBody": "Appuyez sur « Contacter le vendeur » depuis une annonce pour démarrer. Vos fils apparaîtront ici.",
+    "browseListings": "Parcourir les annonces"
+  },
   "newBadge": "Nouveau"
 }
