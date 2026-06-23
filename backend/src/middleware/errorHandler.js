@@ -24,6 +24,14 @@ export function errorHandler(err, req, res, next) {
     return errorResponse(res, 'Resource not found', [], 404);
   }
 
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return errorResponse(res, 'File too large', [], 413);
+  }
+
+  if (err.message && /file type|video format/i.test(err.message)) {
+    return errorResponse(res, err.message, [], 400);
+  }
+
   console.error('[error]', err);
   return errorResponse(
     res,

@@ -9,7 +9,8 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:seed": "node prisma/seed.js",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "youtube:oauth": "node scripts/youtube-oauth-setup.js"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",

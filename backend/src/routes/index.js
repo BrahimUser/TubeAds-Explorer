@@ -7,6 +7,7 @@ import chatRoutes from './chatRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import orderRoutes from './orderRoutes.js';
 import uploadRoutes from './uploadRoutes.js';
+import youtubeRoutes from './youtubeRoutes.js';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/chat', chatRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/orders', orderRoutes);
 router.use('/uploads', uploadRoutes);
+router.use('/youtube', youtubeRoutes);
 
 export default router;

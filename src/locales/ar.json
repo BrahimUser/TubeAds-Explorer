@@ -205,6 +205,7 @@
     "submit": "نشر",
     "submitting": "جارٍ النشر…",
     "uploadingPhotos": "جارٍ رفع الصور…",
+    "uploadingVideo": "جارٍ رفع الفيديو إلى YouTube…",
     "creatingListing": "جارٍ إنشاء الإعلان…",
     "pleaseWait": "يرجى الانتظار — لا تغلق هذه النافذة.",
     "pendingHint": "سيتم مراجعة إعلانك قبل ظهوره في السوق العام.",
@@ -221,7 +222,14 @@
     "fieldPhotos": "الصور",
     "choosePhotos": "اختر صورًا",
     "photosSelected": "{{count}} صورة محددة",
-    "fieldVideo": "رابط الفيديو (اختياري)"
+    "fieldVideo": "فيديو",
+    "fieldVideoUrl": "أو الصق رابط فيديو",
+    "chooseVideo": "اختر فيديو من الجهاز",
+    "videoSelected": "فيديو محدد: {{name}}",
+    "removeVideo": "إزالة الفيديو",
+    "existingVideo": "فيديو الإعلان الحالي",
+    "videoTooLarge": "الفيديو كبير جدًا (الحد الأقصى {{maxMb}} م.ب).",
+    "videoFormatHint": "الحد {{maxMb}} م.ب · MP4, WebM, MOV"
   },
   "shop": {
     "publishListing": "نشر إعلان"

@@ -205,6 +205,7 @@
     "submit": "Publish",
     "submitting": "Publishing…",
     "uploadingPhotos": "Uploading photos…",
+    "uploadingVideo": "Uploading video to YouTube…",
     "creatingListing": "Creating listing…",
     "pleaseWait": "Please wait — do not close this window.",
     "pendingHint": "Your listing will be reviewed before it appears on the public marketplace.",
@@ -221,7 +222,14 @@
     "fieldPhotos": "Photos",
     "choosePhotos": "Choose photos",
     "photosSelected": "{{count}} photo(s) selected",
-    "fieldVideo": "Video URL (optional)"
+    "fieldVideo": "Video",
+    "fieldVideoUrl": "Or paste a video URL",
+    "chooseVideo": "Choose video from device",
+    "videoSelected": "Video selected: {{name}}",
+    "removeVideo": "Remove video",
+    "existingVideo": "Current listing video",
+    "videoTooLarge": "Video is too large (max {{maxMb}} MB).",
+    "videoFormatHint": "Max {{maxMb}} MB · MP4, WebM, MOV"
   },
   "shop": {
     "publishListing": "Publish a listing"

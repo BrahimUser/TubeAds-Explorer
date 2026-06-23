@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { CATEGORIES, CITIES, categoryFirestoreValue } from '../services/categories';
 import { useCreateListing } from '../mutations/useCreateListing';
 import { useUploadFiles } from '../mutations/useUpload';
+import { useUploadVideo } from '../mutations/useUploadVideo';
+import { MAX_VIDEO_BYTES, validateVideoFile } from '../services/youtube';
 
 function coercePriceCentsFromInput(value) {
   const raw = String(value ?? '').trim();
@@ -26,21 +28,25 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
   const { t } = useTranslation();
   const createListing = useCreateListing();
   const uploadFiles = useUploadFiles();
+  const uploadVideo = useUploadVideo();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
   const [city, setCity] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [videoFile, setVideoFile] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [error, setError] = useState('');
 
-  const busy = createListing.isPending || uploadFiles.isPending;
-  const loadingPhase = uploadFiles.isPending
-    ? 'uploading'
-    : createListing.isPending
-      ? 'creating'
-      : null;
+  const busy = createListing.isPending || uploadFiles.isPending || uploadVideo.isPending;
+  const loadingPhase = uploadVideo.isPending
+    ? 'uploadingVideo'
+    : uploadFiles.isPending
+      ? 'uploading'
+      : createListing.isPending
+        ? 'creating'
+        : null;
 
   useEffect(() => {
     if (!open) return;
@@ -50,6 +56,7 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
     setCategory('');
     setCity('');
     setVideoUrl('');
+    setVideoFile(null);
     setPhotos([]);
     setError('');
   }, [open]);
@@ -64,6 +71,7 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
   }, [open, onClose, busy]);
 
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState('');
 
   useEffect(() => {
     const urls = photos.map((file) => URL.createObjectURL(file));
@@ -72,6 +80,16 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [photos]);
+
+  useEffect(() => {
+    if (!videoFile) {
+      setVideoPreviewUrl('');
+      return undefined;
+    }
+    const url = URL.createObjectURL(videoFile);
+    setVideoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [videoFile]);
 
   function handlePhotosChange(e) {
     const files = Array.from(e.target.files || []);
@@ -84,6 +102,24 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function handleVideoChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const validationError = validateVideoFile(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setError('');
+    setVideoFile(file);
+    setVideoUrl('');
+  }
+
+  function removeVideoFile() {
+    setVideoFile(null);
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     const nextTitle = String(title ?? '').trim();
@@ -94,6 +130,21 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
 
     setError('');
     try {
+      let youtubeVideoId = '';
+      let resolvedVideoUrl = String(videoUrl ?? '').trim();
+      let thumbnailFromVideo = '';
+
+      if (videoFile) {
+        const uploaded = await uploadVideo.mutateAsync({
+          file: videoFile,
+          title: nextTitle,
+          description: String(description ?? '').trim(),
+        });
+        youtubeVideoId = uploaded.youtubeVideoId;
+        resolvedVideoUrl = uploaded.videoUrl;
+        thumbnailFromVideo = uploaded.thumbnailUrl;
+      }
+
       const imageUrls = photos.length > 0 ? await uploadFiles.mutateAsync(photos) : [];
 
       const body = {
@@ -103,9 +154,10 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
         currency: 'MAD',
         category: category ? categoryFirestoreValue(category) : '',
         city: city || '',
-        videoUrl: String(videoUrl ?? '').trim(),
+        youtubeVideoId,
+        videoUrl: resolvedVideoUrl,
         imageUrls,
-        thumbnailUrl: imageUrls[0] || '',
+        thumbnailUrl: imageUrls[0] || thumbnailFromVideo || '',
       };
 
       await createListing.mutateAsync(body);
@@ -117,9 +169,13 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
   }
 
   const loadingMessage =
-    loadingPhase === 'uploading'
-      ? t('createAd.uploadingPhotos')
-      : t('createAd.creatingListing');
+    loadingPhase === 'uploadingVideo'
+      ? t('createAd.uploadingVideo')
+      : loadingPhase === 'uploading'
+        ? t('createAd.uploadingPhotos')
+        : t('createAd.creatingListing');
+
+  const maxVideoMb = Math.round(MAX_VIDEO_BYTES / (1024 * 1024));
 
   const fieldDisabled = busy ? 'pointer-events-none opacity-60' : '';
 
@@ -278,16 +334,62 @@ export default function CreateAdModal({ open, onClose, onCreated }) {
             )}
           </div>
 
-          <label className="block">
+          <div className="block">
             <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldVideo')}</div>
-            <input
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              disabled={busy}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
-              placeholder="https://…"
-            />
-          </label>
+            {videoFile && videoPreviewUrl ? (
+              <div className="relative mt-2 inline-block">
+                <video
+                  src={videoPreviewUrl}
+                  className="max-h-32 rounded-lg border border-slate-200"
+                  controls
+                  muted
+                  playsInline
+                />
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={removeVideoFile}
+                  className="absolute -end-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow"
+                  aria-label={t('createAd.removeVideo')}
+                >
+                  ×
+                </button>
+              </div>
+            ) : null}
+            <label
+              className={`mt-2 inline-flex cursor-pointer rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 ${busy ? 'pointer-events-none opacity-60' : ''}`}
+            >
+              <input
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,.mp4,.webm,.mov,.avi"
+                disabled={busy}
+                onChange={handleVideoChange}
+                className="hidden"
+              />
+              {t('createAd.chooseVideo')}
+            </label>
+            {videoFile ? (
+              <p className="mt-1 text-xs text-slate-500">
+                {t('createAd.videoSelected', { name: videoFile.name })}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-slate-500">
+                {t('createAd.videoFormatHint', { maxMb: maxVideoMb })}
+              </p>
+            )}
+            {!videoFile ? (
+              <label className="mt-3 block">
+                <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldVideoUrl')}</div>
+                <input
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  disabled={busy}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
+                  placeholder="https://…"
+                />
+              </label>
+            ) : null}
+          </div>
 
           {error ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700">

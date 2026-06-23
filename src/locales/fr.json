@@ -205,6 +205,7 @@
     "submit": "Publier",
     "submitting": "Publication…",
     "uploadingPhotos": "Envoi des photos…",
+    "uploadingVideo": "Envoi de la vidéo sur YouTube…",
     "creatingListing": "Création de l'annonce…",
     "pleaseWait": "Veuillez patienter, ne fermez pas cette fenêtre.",
     "pendingHint": "Votre annonce sera examinée avant d'apparaître sur le marché public.",
@@ -221,7 +222,14 @@
     "fieldPhotos": "Photos",
     "choosePhotos": "Choisir des photos",
     "photosSelected": "{{count}} photo(s) sélectionnée(s)",
-    "fieldVideo": "URL vidéo (optionnel)"
+    "fieldVideo": "Vidéo",
+    "fieldVideoUrl": "Ou coller une URL vidéo",
+    "chooseVideo": "Choisir une vidéo sur l'appareil",
+    "videoSelected": "Vidéo sélectionnée : {{name}}",
+    "removeVideo": "Supprimer la vidéo",
+    "existingVideo": "Vidéo actuelle de l'annonce",
+    "videoTooLarge": "Vidéo trop volumineuse (max {{maxMb}} Mo).",
+    "videoFormatHint": "Max {{maxMb}} Mo · MP4, WebM, MOV"
   },
   "shop": {
     "publishListing": "Publier une annonce"

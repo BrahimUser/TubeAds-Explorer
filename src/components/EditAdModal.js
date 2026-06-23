@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { CATEGORIES, CITIES, categoryFirestoreValue } from '../services/categories';
 import { useUpdateListing } from '../mutations/useUpdateListing';
 import { useUploadFiles } from '../mutations/useUpload';
+import { useUploadVideo } from '../mutations/useUploadVideo';
+import { MAX_VIDEO_BYTES, validateVideoFile } from '../services/youtube';
 
 function coercePriceCentsFromInput(value) {
   const raw = String(value ?? '').trim();
@@ -37,6 +39,7 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
   const { user } = useAuth();
   const updateListing = useUpdateListing();
   const uploadFiles = useUploadFiles();
+  const uploadVideo = useUploadVideo();
   const isOwner = !!user && !!ad && user.uid === ad.ownerUid;
 
   const initial = useMemo(() => {
@@ -52,6 +55,7 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
       category: categoryIdFromStored(ad?.category),
       city: ad?.city || '',
       videoUrl: ad?.videoUrl || '',
+      youtubeVideoId: ad?.youtubeVideoId || '',
       imageUrls,
     };
   }, [ad]);
@@ -62,16 +66,20 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
   const [category, setCategory] = useState(initial.category);
   const [city, setCity] = useState(initial.city);
   const [videoUrl, setVideoUrl] = useState(initial.videoUrl);
+  const [existingYoutubeVideoId, setExistingYoutubeVideoId] = useState(initial.youtubeVideoId);
+  const [videoFile, setVideoFile] = useState(null);
   const [existingImageUrls, setExistingImageUrls] = useState(initial.imageUrls);
   const [newPhotos, setNewPhotos] = useState([]);
   const [error, setError] = useState('');
 
-  const busy = updateListing.isPending || uploadFiles.isPending;
-  const loadingPhase = uploadFiles.isPending
-    ? 'uploading'
-    : updateListing.isPending
-      ? 'saving'
-      : null;
+  const busy = updateListing.isPending || uploadFiles.isPending || uploadVideo.isPending;
+  const loadingPhase = uploadVideo.isPending
+    ? 'uploadingVideo'
+    : uploadFiles.isPending
+      ? 'uploading'
+      : updateListing.isPending
+        ? 'saving'
+        : null;
 
   useEffect(() => {
     setTitle(initial.title);
@@ -80,6 +88,8 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
     setCategory(initial.category);
     setCity(initial.city);
     setVideoUrl(initial.videoUrl);
+    setExistingYoutubeVideoId(initial.youtubeVideoId);
+    setVideoFile(null);
     setExistingImageUrls(initial.imageUrls);
     setNewPhotos([]);
     setError('');
@@ -95,6 +105,7 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
   }, [open, onClose, busy]);
 
   const [newPhotoPreviewUrls, setNewPhotoPreviewUrls] = useState([]);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState('');
 
   useEffect(() => {
     const urls = newPhotos.map((file) => URL.createObjectURL(file));
@@ -103,6 +114,16 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [newPhotos]);
+
+  useEffect(() => {
+    if (!videoFile) {
+      setVideoPreviewUrl('');
+      return undefined;
+    }
+    const url = URL.createObjectURL(videoFile);
+    setVideoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [videoFile]);
 
   function handlePhotosChange(e) {
     const files = Array.from(e.target.files || []);
@@ -117,6 +138,30 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
 
   function removeNewPhoto(index) {
     setNewPhotos((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleVideoChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const validationError = validateVideoFile(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setError('');
+    setVideoFile(file);
+    setVideoUrl('');
+    setExistingYoutubeVideoId('');
+  }
+
+  function removeVideoFile() {
+    setVideoFile(null);
+  }
+
+  function removeExistingVideo() {
+    setExistingYoutubeVideoId('');
+    setVideoUrl('');
   }
 
   async function onSubmit(e) {
@@ -134,6 +179,21 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
 
     setError('');
     try {
+      let youtubeVideoId = existingYoutubeVideoId;
+      let resolvedVideoUrl = String(videoUrl ?? '').trim();
+      let thumbnailFromVideo = '';
+
+      if (videoFile) {
+        const uploaded = await uploadVideo.mutateAsync({
+          file: videoFile,
+          title: nextTitle,
+          description: String(description ?? '').trim(),
+        });
+        youtubeVideoId = uploaded.youtubeVideoId;
+        resolvedVideoUrl = uploaded.videoUrl;
+        thumbnailFromVideo = uploaded.thumbnailUrl;
+      }
+
       const uploadedUrls =
         newPhotos.length > 0 ? await uploadFiles.mutateAsync(newPhotos) : [];
       const imageUrls = [...existingImageUrls, ...uploadedUrls];
@@ -144,9 +204,10 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
         priceCents: coercePriceCentsFromInput(price),
         category: category ? categoryFirestoreValue(category) : '',
         city: city || '',
-        videoUrl: String(videoUrl ?? '').trim(),
+        youtubeVideoId,
+        videoUrl: resolvedVideoUrl,
         imageUrls,
-        thumbnailUrl: imageUrls[0] || '',
+        thumbnailUrl: imageUrls[0] || thumbnailFromVideo || '',
         status: 'pending',
       };
       await updateListing.mutateAsync({ adId: ad.id, patch });
@@ -158,9 +219,16 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
   }
 
   const loadingMessage =
-    loadingPhase === 'uploading'
-      ? t('createAd.uploadingPhotos')
-      : t('editAd.saving');
+    loadingPhase === 'uploadingVideo'
+      ? t('createAd.uploadingVideo')
+      : loadingPhase === 'uploading'
+        ? t('createAd.uploadingPhotos')
+        : t('editAd.saving');
+
+  const maxVideoMb = Math.round(MAX_VIDEO_BYTES / (1024 * 1024));
+  const existingVideoThumb = existingYoutubeVideoId
+    ? `https://i.ytimg.com/vi/${existingYoutubeVideoId}/hqdefault.jpg`
+    : '';
 
   const fieldDisabled = busy ? 'pointer-events-none opacity-60' : '';
 
@@ -340,16 +408,80 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
             )}
           </div>
 
-          <label className="block">
+          <div className="block">
             <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldVideo')}</div>
-            <input
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              disabled={busy}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
-              placeholder="https://…"
-            />
-          </label>
+            {videoFile && videoPreviewUrl ? (
+              <div className="relative mt-2 inline-block">
+                <video
+                  src={videoPreviewUrl}
+                  className="max-h-32 rounded-lg border border-slate-200"
+                  controls
+                  muted
+                  playsInline
+                />
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={removeVideoFile}
+                  className="absolute -end-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow"
+                  aria-label={t('createAd.removeVideo')}
+                >
+                  ×
+                </button>
+              </div>
+            ) : existingYoutubeVideoId && existingVideoThumb ? (
+              <div className="relative mt-2 inline-block">
+                <img
+                  src={existingVideoThumb}
+                  alt=""
+                  className="h-20 rounded-lg border border-slate-200 object-cover"
+                />
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={removeExistingVideo}
+                  className="absolute -end-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow"
+                  aria-label={t('createAd.removeVideo')}
+                >
+                  ×
+                </button>
+                <p className="mt-1 text-xs text-slate-500">{t('createAd.existingVideo')}</p>
+              </div>
+            ) : null}
+            <label
+              className={`mt-2 inline-flex cursor-pointer rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 ${busy ? 'pointer-events-none opacity-60' : ''}`}
+            >
+              <input
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,.mp4,.webm,.mov,.avi"
+                disabled={busy}
+                onChange={handleVideoChange}
+                className="hidden"
+              />
+              {t('createAd.chooseVideo')}
+            </label>
+            {videoFile ? (
+              <p className="mt-1 text-xs text-slate-500">
+                {t('createAd.videoSelected', { name: videoFile.name })}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-slate-500">
+                {t('createAd.videoFormatHint', { maxMb: maxVideoMb })}
+              </p>
+            )}
+            {!videoFile && !existingYoutubeVideoId ? (
+              <label className="mt-3 block">
+                <div className="text-xs font-semibold text-slate-700">{t('createAd.fieldVideoUrl')}</div>
+                <input
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  disabled={busy}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
+                  placeholder="https://…"
+                />
+              </label>
+            ) : null}
+          </div>
 
           {error ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700">

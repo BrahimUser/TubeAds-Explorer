@@ -30,4 +30,15 @@ export const env = {
     dir: process.env.UPLOAD_DIR || 'uploads',
     maxSizeMb: Number(process.env.MAX_UPLOAD_SIZE_MB) || 10,
   },
+  youtube: {
+    clientId: process.env.YOUTUBE_CLIENT_ID || '',
+    clientSecret: process.env.YOUTUBE_CLIENT_SECRET || '',
+    refreshToken: process.env.YOUTUBE_REFRESH_TOKEN || '',
+    channelId: process.env.YOUTUBE_CHANNEL_ID || '',
+    channelHandle: process.env.YOUTUBE_CHANNEL_HANDLE || 'mageDev-m2r',
+    oauthRedirectUri: process.env.YOUTUBE_OAUTH_REDIRECT_URI || 'http://localhost:3333/oauth/callback',
+    maxVideoMb: Number(process.env.YOUTUBE_MAX_VIDEO_MB) || 200,
+    privacyStatus: process.env.YOUTUBE_PRIVACY_STATUS || 'unlisted',
+    categoryId: process.env.YOUTUBE_CATEGORY_ID || '22',
+  },
 };
