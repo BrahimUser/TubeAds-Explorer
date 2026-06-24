@@ -1,4 +1,5 @@
 import RNFS from 'react-native-fs';
+import api, { unwrap } from '../api/client';
 
 /**
  * YouTube upload + (optional) playlist insertion.
@@ -236,4 +237,42 @@ export async function uploadVideoToYouTube(params: {
   const result = await response.json().catch(() => null);
   const videoId: string | undefined = result?.id;
   return { videoId };
+}
+
+export type BackendYoutubeUploadResult = {
+  youtubeVideoId: string;
+  videoUrl: string;
+  thumbnailUrl: string;
+};
+
+/**
+ * Uploads a recorded video file to our backend, which then uploads it to the
+ * shared YouTube channel (server-side OAuth via refresh token).
+ */
+export async function uploadVideoToYoutubeViaBackend(params: {
+  filePath: string;
+  title: string;
+  description?: string;
+}): Promise<BackendYoutubeUploadResult> {
+  const { filePath, title, description } = params;
+
+  const form = new FormData();
+  form.append('video', {
+    uri: toFileUri(filePath),
+    type: 'video/mp4',
+    name: 'video.mp4',
+  } as unknown as Blob);
+  form.append('title', title);
+  if (typeof description === 'string') {
+    form.append('description', description);
+  }
+
+  const res = await api.post('/youtube/upload', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 10 * 60_000,
+    maxContentLength: Infinity,
+    maxBodyLength: Infinity,
+  });
+
+  return unwrap<BackendYoutubeUploadResult>(res);
 }

@@ -28,7 +28,6 @@ import { Dropdown } from '../components/Dropdown';
 import {
   DEFAULT_CURRENCY,
   MAX_RECORDING_SECONDS,
-  YOUTUBE_CATEGORY_ID,
 } from '../config/constants';
 import {
   CATEGORIES,
@@ -39,16 +38,14 @@ import {
 } from '../config/marketplace';
 import { useAuthUser } from '../hooks/useAuthUser';
 import type { RootStackParamList } from '../navigation/types';
-import { getYoutubeAccessToken } from '../services/auth';
 import { createAd } from '../services/listings';
 import { colors, radii, spacing, typography } from '../theme';
-import { uploadVideoToYouTube, youtubeThumbnailUrl } from '../services/youtube';
+import { uploadVideoToYoutubeViaBackend, youtubeThumbnailUrl } from '../services/youtube';
 
 type CameraPosition = 'back' | 'front';
 
 type PublishStatus =
   | 'idle'
-  | 'signing-in'
   | 'uploading'
   | 'saving-listing'
   | 'done'
@@ -166,7 +163,6 @@ export function PostAdScreen({ navigation }: Props) {
   }, [clearRecordingTimers]);
 
   const isPublishInFlight =
-    publishStatus === 'signing-in' ||
     publishStatus === 'uploading' ||
     publishStatus === 'saving-listing';
 
@@ -363,26 +359,14 @@ export function PostAdScreen({ navigation }: Props) {
       return;
     }
 
-    setPublishStatus('signing-in');
-    setPublishMessage('Connecting Google account…');
-
     try {
-      // Fetch the YouTube OAuth token without touching Firebase Auth.
-      // Signed-in users without a cached Google session see the Google OAuth dialog here; users
-      // who originally signed in with Google get a cached token and
-      // sail through.
-      const accessToken = await getYoutubeAccessToken();
-
       setPublishStatus('uploading');
       setPublishMessage('Uploading to YouTube…');
 
-      const { videoId: youtubeVideoId } = await uploadVideoToYouTube({
-        accessToken,
+      const { youtubeVideoId } = await uploadVideoToYoutubeViaBackend({
         filePath: lastVideo.path,
         title: title.trim(),
         description: description.trim(),
-        categoryId: YOUTUBE_CATEGORY_ID,
-        privacyStatus: 'unlisted',
       });
       if (!youtubeVideoId) {
         throw new Error('YouTube did not return a video id.');
@@ -578,13 +562,11 @@ export function PostAdScreen({ navigation }: Props) {
           disabled={!canPublish}
           loading={isPublishInFlight}
           loadingLabel={
-            publishStatus === 'signing-in'
-              ? 'Connecting Google…'
-              : publishStatus === 'uploading'
-                ? 'Uploading to YouTube…'
-                : publishStatus === 'saving-listing'
-                  ? 'Saving to Firestore…'
-                  : undefined
+            publishStatus === 'uploading'
+              ? 'Uploading to YouTube…'
+              : publishStatus === 'saving-listing'
+                ? 'Saving to Firestore…'
+                : undefined
           }
           onPress={handlePublish}
         />
