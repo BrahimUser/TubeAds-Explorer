@@ -35,9 +35,9 @@ export const YOUTUBE_CATEGORY_ID = '22';
 /**
  * Hard cap for video recording duration (seconds).
  *
- * Marketplace listings don't need long videos — keep ads short.
+ * Short-form listing videos — up to 90 seconds (Shorts-style).
  */
-export const MAX_RECORDING_SECONDS = 30;
+export const MAX_RECORDING_SECONDS = 90;
 
 /**
  * OAuth scopes required so the access token can BOTH upload videos and

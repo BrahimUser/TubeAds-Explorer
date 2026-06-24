@@ -4,14 +4,19 @@ import {
   Alert,
   AppState,
   type AppStateStatus,
+  Dimensions,
   KeyboardAvoidingView,
+  Linking,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import {
   Camera,
   type CameraRef,
@@ -23,6 +28,7 @@ import {
 } from 'react-native-vision-camera';
 import type { Recorder } from 'react-native-vision-camera';
 import type { StackScreenProps } from '@react-navigation/stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
 import { Dropdown } from '../components/Dropdown';
 import {
@@ -43,6 +49,7 @@ import { colors, radii, spacing, typography } from '../theme';
 import { uploadVideoToYoutubeViaBackend, youtubeThumbnailUrl } from '../services/youtube';
 
 type CameraPosition = 'back' | 'front';
+type CameraMode = 'form' | 'shorts';
 
 type PublishStatus =
   | 'idle'
@@ -53,29 +60,34 @@ type PublishStatus =
 
 type Props = StackScreenProps<RootStackParamList, 'PostAd'>;
 
+function showPermissionSettingsAlert() {
+  Alert.alert(
+    'Permissions required',
+    'Camera and microphone access are needed to record your listing video. Enable them in Settings.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Open Settings', onPress: () => Linking.openSettings() },
+    ],
+  );
+}
+
 /**
  * "Post a new ad" screen.
  *
  * Flow:
  *   1. User fills in title / description / price.
- *   2. User records up to MAX_RECORDING_SECONDS of video.
+ *   2. User records up to MAX_RECORDING_SECONDS of video (Shorts-style full screen).
  *   3. User taps "Publish":
- *      a. getYoutubeAccessToken() → Google OAuth for YouTube (account picker if
- *         needed; Firebase uid stays the signed-in marketplace user)
+ *      a. getYoutubeAccessToken() → Google OAuth for YouTube
  *      b. uploadVideoToYouTube(...) → returns YouTube id
  *      c. createAd({...})     → writes Firestore document (listings)
- *      d. Alert then navigation.goBack() → Home feed updates live for approved listings
- *
- * The camera/recording plumbing is unchanged from the original `App.tsx` —
- * only the upload terminus changed (Firestore write instead of YouTube
- * playlist insert).
+ *      d. Alert then navigation.goBack()
  */
 export function PostAdScreen({ navigation }: Props) {
-  // --- Auth gate ------------------------------------------------------------
-  // Anyone can navigate here (deep link, accidental nav), but only signed-in
-  // users may stay. We bounce unauthenticated visitors to the Auth screen so
-  // the gate is enforced visually, not just at publish time.
   const { user, initializing } = useAuthUser();
+  const isFocused = useIsFocused();
+  const insets = useSafeAreaInsets();
+
   useEffect(() => {
     if (!initializing && !user) {
       navigation.replace('Auth', { mode: 'sign-in' });
@@ -85,20 +97,14 @@ export function PostAdScreen({ navigation }: Props) {
   // --- Form state -----------------------------------------------------------
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  /** User-typed price, e.g. "1234.50". Validated/parsed at publish time. */
   const [priceText, setPriceText] = useState('');
-  /**
-   * Avito-style structured fields. Both must be picked before Publish
-   * unlocks (see `canPublish` below). We default to `null` instead of an
-   * arbitrary first option so an unselected dropdown reads as "needs
-   * input" rather than silently defaulting to "Rugs in Casablanca".
-   */
   const [category, setCategory] = useState<CategoryId | null>(null);
   const [city, setCity] = useState<CityId | null>(null);
 
   // --- Camera state ---------------------------------------------------------
   const cameraRef = useRef<CameraRef>(null);
   const [cameraPosition, setCameraPosition] = useState<CameraPosition>('back');
+  const [cameraMode, setCameraMode] = useState<CameraMode>('form');
   const device = useCameraDevice(cameraPosition);
 
   const { hasPermission: hasCameraPermission, requestPermission: requestCameraPermission } =
@@ -129,6 +135,9 @@ export function PostAdScreen({ navigation }: Props) {
 
   const cameraStartedRef = useRef(false);
   const cameraStartListenersRef = useRef<Array<() => void>>([]);
+
+  const cameraShouldBeActive =
+    isFocused && appState === 'active' && permissionsGranted && Boolean(device);
 
   const clearRecordingTimers = useCallback(() => {
     if (stopTimerRef.current) {
@@ -212,8 +221,9 @@ export function PostAdScreen({ navigation }: Props) {
   }, []);
 
   const onPressFlip = useCallback(() => {
+    if (isRecording) return;
     setCameraPosition((p) => (p === 'back' ? 'front' : 'back'));
-  }, []);
+  }, [isRecording]);
 
   const ensurePermissions = useCallback(async () => {
     let camOk = hasCameraPermission;
@@ -221,16 +231,38 @@ export function PostAdScreen({ navigation }: Props) {
     if (!camOk) camOk = await requestCameraPermission();
     if (!micOk) micOk = await requestMicPermission();
     if (!camOk || !micOk) {
-      Alert.alert(
-        'Permissions required',
-        'Open Settings and grant Camera and Microphone permissions, then try again.',
-      );
+      showPermissionSettingsAlert();
       return false;
     }
     return true;
   }, [hasCameraPermission, hasMicPermission, requestCameraPermission, requestMicPermission]);
 
-  const onPressRecord = async () => {
+  const onRequestPermissions = useCallback(async () => {
+    const camOk = await requestCameraPermission();
+    const micOk = await requestMicPermission();
+    if (!camOk || !micOk) {
+      showPermissionSettingsAlert();
+    }
+  }, [requestCameraPermission, requestMicPermission]);
+
+  const onPressOpenShorts = async () => {
+    const ok = await ensurePermissions();
+    if (!ok) return;
+
+    if (!device) {
+      Alert.alert('No camera available', 'Could not find a camera at the requested position.');
+      return;
+    }
+
+    setCameraMode('shorts');
+  };
+
+  const onPressCloseShorts = useCallback(() => {
+    if (isRecording) return;
+    setCameraMode('form');
+  }, [isRecording]);
+
+  const onPressRecordToggle = async () => {
     if (isRecording) {
       clearRecordingTimers();
       await stopRecordingSafely();
@@ -246,7 +278,6 @@ export function PostAdScreen({ navigation }: Props) {
     }
 
     setLastVideo(null);
-    cameraStartedRef.current = false;
 
     setIsRecording(true);
     setRecordingSecondsLeft(MAX_RECORDING_SECONDS);
@@ -265,6 +296,7 @@ export function PostAdScreen({ navigation }: Props) {
           setLastVideo({ path: filePath });
           recorderRef.current = null;
           setIsRecording(false);
+          setCameraMode('form');
         },
         (error) => {
           clearRecordingTimers();
@@ -296,13 +328,14 @@ export function PostAdScreen({ navigation }: Props) {
     }
   }, [appState, isRecording, clearRecordingTimers, stopRecordingSafely]);
 
-  /**
-   * Parse the user-typed price into integer cents.
-   * Returns null if the input is missing/invalid/non-positive.
-   *
-   * Accepts both "." and "," as decimal separators (Avito's user base
-   * uses comma; numeric keypads on iOS only emit ".").
-   */
+  useEffect(() => {
+    if (cameraMode === 'form' && isRecording) {
+      clearRecordingTimers();
+      stopRecordingSafely();
+      setIsRecording(false);
+    }
+  }, [cameraMode, isRecording, clearRecordingTimers, stopRecordingSafely]);
+
   const parsePriceToCents = (raw: string): number | null => {
     const normalized = raw.trim().replace(/\s+/g, '').replace(',', '.');
     if (!normalized) return null;
@@ -317,10 +350,6 @@ export function PostAdScreen({ navigation }: Props) {
     if (title.trim().length < 3) return false;
     if (description.trim().length < 5) return false;
     if (parsePriceToCents(priceText) === null) return false;
-    // Category & city are mandatory — Avito-style listings always
-    // need both for browse/filter to work. We block Publish here AND
-    // double-check in `handlePublish` so a programmatic call (deep
-    // link, automated test) can't bypass the gate.
     if (!category) return false;
     if (!city) return false;
     return true;
@@ -334,12 +363,9 @@ export function PostAdScreen({ navigation }: Props) {
     city,
   ]);
 
-  /** Full publish pipeline: YouTube upload → Firestore listing (no Firebase Storage). */
   const handlePublish = async () => {
     if (!lastVideo?.path) return;
     if (!user) {
-      // Belt-and-braces: useEffect already redirected, but guard the
-      // happy path too in case the user races the redirect.
       navigation.replace('Auth', { mode: 'sign-in' });
       return;
     }
@@ -349,9 +375,6 @@ export function PostAdScreen({ navigation }: Props) {
       return;
     }
     if (!category || !city) {
-      // The Publish button should already be disabled in this state,
-      // but this guards a programmatic call (and narrows the type
-      // for `createAd(...)` below).
       Alert.alert(
         'Missing information',
         'Please select a category and a city before publishing.',
@@ -402,9 +425,23 @@ export function PostAdScreen({ navigation }: Props) {
 
   const flipLabel = cameraPosition === 'back' ? 'Flip → Front' : 'Flip → Back';
 
-  // Guard render: while we're either checking auth or about to redirect
-  // a logged-out user, paint a minimal placeholder so the form + camera
-  // don't briefly flash on screen.
+  const renderCamera = (active: boolean) => {
+    if (!device || !permissionsGranted) return null;
+    return (
+      <Camera
+        ref={cameraRef}
+        style={StyleSheet.absoluteFill}
+        device={device}
+        isActive={active && cameraShouldBeActive}
+        outputs={outputs}
+        resizeMode="cover"
+        onError={onCameraError}
+        onStarted={onCameraStarted}
+        onStopped={onCameraStopped}
+      />
+    );
+  };
+
   if (initializing || !user) {
     return (
       <View style={[styles.flex, styles.center]}>
@@ -414,178 +451,228 @@ export function PostAdScreen({ navigation }: Props) {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
+    <>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Form -------------------------------------------------------- */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.screenTitle}>New ad</Text>
-          <Text style={styles.screenSubtitle}>
-            Tell buyers what you're selling. All fields are required.
-          </Text>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.fieldGroup}>
+            <Text style={styles.screenTitle}>New ad</Text>
+            <Text style={styles.screenSubtitle}>
+              Tell buyers what you're selling. All fields are required.
+            </Text>
 
-          <Text style={styles.label}>Title</Text>
-          <TextInput
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="e.g. Handmade Beni Ourain rug 2x3m"
-            placeholderTextColor={colors.textDim}
-            maxLength={80}
-          />
-
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={[styles.input, styles.multiline]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Condition, dimensions, accessories included…"
-            placeholderTextColor={colors.textDim}
-            multiline
-            maxLength={500}
-          />
-
-          <Text style={styles.label}>Price ({DEFAULT_CURRENCY})</Text>
-          <TextInput
-            style={styles.input}
-            value={priceText}
-            onChangeText={setPriceText}
-            placeholder="1500"
-            placeholderTextColor={colors.textDim}
-            keyboardType="decimal-pad"
-            inputMode="decimal"
-          />
-
-          {/* Structured fields — required for browse/filter to work. */}
-          <View style={styles.dropdownSpacer} />
-          <Dropdown<CategoryId>
-            label="Category"
-            value={category}
-            options={CATEGORIES}
-            onChange={setCategory}
-            placeholder="Select a category"
-          />
-
-          <View style={styles.dropdownSpacer} />
-          <Dropdown<CityId>
-            label="City"
-            value={city}
-            options={CITIES}
-            onChange={setCity}
-            placeholder="Select a city"
-          />
-        </View>
-
-        {/* Camera preview --------------------------------------------- */}
-        <View style={styles.preview}>
-          {isRecording && device && permissionsGranted ? (
-            <Camera
-              ref={cameraRef}
-              style={StyleSheet.absoluteFill}
-              device={device}
-              isActive={isRecording}
-              outputs={outputs}
-              resizeMode="cover"
-              onError={onCameraError}
-              onStarted={onCameraStarted}
-              onStopped={onCameraStopped}
+            <Text style={styles.label}>Title</Text>
+            <TextInput
+              style={styles.input}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="e.g. Handmade Beni Ourain rug 2x3m"
+              placeholderTextColor={colors.textDim}
+              maxLength={80}
             />
-          ) : (
-            <View style={styles.center}>
-              <Text style={styles.previewTitle}>
-                {lastVideo?.path ? 'Video recorded' : 'Camera off'}
-              </Text>
-              <Text style={styles.previewSubtitle}>
-                {!device
-                  ? `No ${cameraPosition} camera found on this device.`
-                  : !permissionsGranted
-                  ? 'Camera or microphone permission is missing.'
-                  : lastVideo?.path
-                  ? 'Tap Record again to retake.'
-                  : 'Press Record to start the camera.'}
-              </Text>
-              <Text style={styles.previewHint}>{`Camera: ${cameraPosition}`}</Text>
-              {!permissionsGranted && (
-                <Button
-                  label="Grant permissions"
-                  variant="secondary"
-                  onPress={async () => {
-                    await requestCameraPermission();
-                    await requestMicPermission();
-                  }}
-                  style={styles.permissionButton}
-                />
-              )}
-            </View>
-          )}
 
-          {isRecording && (
-            <View style={styles.recordingBadge}>
-              <View style={styles.recordingDot} />
-              <Text style={styles.recordingText}>
-                REC{recordingSecondsLeft !== null ? ` · ${recordingSecondsLeft}s` : ''}
-              </Text>
-            </View>
-          )}
-        </View>
+            <Text style={styles.label}>Description</Text>
+            <TextInput
+              style={[styles.input, styles.multiline]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Condition, dimensions, accessories included…"
+              placeholderTextColor={colors.textDim}
+              multiline
+              maxLength={500}
+            />
 
-        {/* Camera controls -------------------------------------------- */}
-        <View style={styles.controls}>
+            <Text style={styles.label}>Price ({DEFAULT_CURRENCY})</Text>
+            <TextInput
+              style={styles.input}
+              value={priceText}
+              onChangeText={setPriceText}
+              placeholder="1500"
+              placeholderTextColor={colors.textDim}
+              keyboardType="decimal-pad"
+              inputMode="decimal"
+            />
+
+            <View style={styles.dropdownSpacer} />
+            <Dropdown<CategoryId>
+              label="Category"
+              value={category}
+              options={CATEGORIES}
+              onChange={setCategory}
+              placeholder="Select a category"
+            />
+
+            <View style={styles.dropdownSpacer} />
+            <Dropdown<CityId>
+              label="City"
+              value={city}
+              options={CITIES}
+              onChange={setCity}
+              placeholder="Select a city"
+            />
+          </View>
+
+          <View style={styles.preview}>
+            {permissionsGranted && device ? (
+              <>
+                {cameraMode === 'form' && renderCamera(true)}
+                {lastVideo?.path && !isRecording && (
+                  <View style={styles.recordedOverlay}>
+                    <Text style={styles.recordedOverlayText}>Video recorded</Text>
+                    <Text style={styles.recordedOverlayHint}>Tap Record to retake</Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <View style={styles.center}>
+                <Text style={styles.previewTitle}>
+                  {lastVideo?.path ? 'Video recorded' : 'Camera access needed'}
+                </Text>
+                <Text style={styles.previewSubtitle}>
+                  {!device
+                    ? `No ${cameraPosition} camera found on this device.`
+                    : 'Allow camera and microphone to preview and record your listing video.'}
+                </Text>
+                {!permissionsGranted && (
+                  <View style={styles.permissionActions}>
+                    <Button
+                      label="Grant permissions"
+                      variant="secondary"
+                      onPress={onRequestPermissions}
+                      style={styles.permissionButton}
+                    />
+                    <Button
+                      label="Open Settings"
+                      variant="ghost"
+                      onPress={() => Linking.openSettings()}
+                      style={styles.permissionButton}
+                    />
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.controls}>
+            <Button
+              label={flipLabel}
+              variant="secondary"
+              onPress={onPressFlip}
+              disabled={!permissionsGranted || isRecording}
+              style={styles.flipButton}
+            />
+            <Button
+              label={lastVideo?.path ? 'Retake video' : 'Record'}
+              variant="primary"
+              onPress={onPressOpenShorts}
+              disabled={!permissionsGranted}
+              style={styles.recordButton}
+            />
+          </View>
+
           <Button
-            label={flipLabel}
-            variant="secondary"
-            onPress={onPressFlip}
-            style={styles.flipButton}
-          />
-          <Button
-            label={
-              isRecording
-                ? `Stop${recordingSecondsLeft !== null ? ` (${recordingSecondsLeft}s)` : ''}`
-                : 'Record'
+            label="Publish ad"
+            variant="success"
+            size="lg"
+            disabled={!canPublish}
+            loading={isPublishInFlight}
+            loadingLabel={
+              publishStatus === 'uploading'
+                ? 'Uploading to YouTube…'
+                : publishStatus === 'saving-listing'
+                  ? 'Saving to Firestore…'
+                  : undefined
             }
-            variant={isRecording ? 'danger' : 'primary'}
-            onPress={onPressRecord}
-            style={styles.recordButton}
+            onPress={handlePublish}
           />
-        </View>
 
-        {/* Publish ---------------------------------------------------- */}
-        <Button
-          label="Publish ad"
-          variant="success"
-          size="lg"
-          disabled={!canPublish}
-          loading={isPublishInFlight}
-          loadingLabel={
-            publishStatus === 'uploading'
-              ? 'Uploading to YouTube…'
-              : publishStatus === 'saving-listing'
-                ? 'Saving to Firestore…'
-                : undefined
-          }
-          onPress={handlePublish}
-        />
+          <View style={styles.statusRow}>
+            {isPublishInFlight && <ActivityIndicator color={colors.secondary} />}
+            <Text style={styles.statusText}>
+              {publishMessage ||
+                (lastVideo?.path
+                  ? `Recorded: ${lastVideo.path.split('/').pop()}`
+                  : `Fill in the form and record a video (up to ${MAX_RECORDING_SECONDS}s).`)}
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-        <View style={styles.statusRow}>
-          {isPublishInFlight && <ActivityIndicator color={colors.secondary} />}
-          <Text style={styles.statusText}>
-            {publishMessage ||
-              (lastVideo?.path
-                ? `Recorded: ${lastVideo.path.split('/').pop()}`
-                : isRecording
-                ? `Recording… max ${MAX_RECORDING_SECONDS}s`
-                : 'Fill in the form and record a video.')}
-          </Text>
+      <Modal
+        visible={cameraMode === 'shorts'}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={onPressCloseShorts}
+      >
+        <View style={styles.shortsRoot}>
+          {renderCamera(true)}
+
+          <View style={[styles.shortsTopBar, { paddingTop: insets.top + spacing.sm }]}>
+            {!isRecording ? (
+              <Pressable
+                onPress={onPressCloseShorts}
+                style={styles.shortsCloseButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close recorder"
+              >
+                <Text style={styles.shortsCloseText}>✕</Text>
+              </Pressable>
+            ) : (
+              <View style={styles.shortsClosePlaceholder} />
+            )}
+
+            {isRecording ? (
+              <View style={styles.recordingBadge}>
+                <View style={styles.recordingDot} />
+                <Text style={styles.recordingText}>
+                  REC{recordingSecondsLeft !== null ? ` · ${recordingSecondsLeft}s` : ''}
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.shortsHint}>Up to {MAX_RECORDING_SECONDS}s</Text>
+            )}
+          </View>
+
+          <View style={[styles.shortsBottomBar, { paddingBottom: insets.bottom + spacing.lg }]}>
+            <Pressable
+              onPress={onPressFlip}
+              disabled={isRecording}
+              style={[styles.shortsFlipButton, isRecording && styles.shortsControlDisabled]}
+              accessibilityRole="button"
+              accessibilityLabel="Flip camera"
+            >
+              <Text style={styles.shortsFlipText}>Flip</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={onPressRecordToggle}
+              style={styles.shortsRecordOuter}
+              accessibilityRole="button"
+              accessibilityLabel={isRecording ? 'Stop recording' : 'Start recording'}
+            >
+              <View
+                style={[
+                  styles.shortsRecordInner,
+                  isRecording && styles.shortsRecordInnerActive,
+                ]}
+              />
+            </Pressable>
+
+            <View style={styles.shortsFlipButtonRemove} />
+          </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </Modal>
+    </>
   );
 }
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const PREVIEW_HEIGHT = Math.min(SCREEN_WIDTH * (16 / 9), 400);
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
@@ -616,14 +703,11 @@ const styles = StyleSheet.create({
   },
   multiline: { minHeight: 96, textAlignVertical: 'top' },
   preview: {
-    height: 240,
+    width: '100%',
+    height: PREVIEW_HEIGHT,
     borderRadius: radii.md,
     overflow: 'hidden',
-    // Soft surface in the placeholder state ("Camera off"). When the
-    // user starts recording, the <Camera /> view fills this absolutely
-    // with its own black/video frame, so this color is only visible
-    // when the camera isn't active — and dark text on it stays legible.
-    backgroundColor: colors.surface,
+    backgroundColor: '#000000',
     marginTop: spacing.xs,
     borderWidth: 1,
     borderColor: colors.border,
@@ -637,11 +721,20 @@ const styles = StyleSheet.create({
   },
   previewTitle: { ...typography.title, color: colors.text },
   previewSubtitle: { ...typography.caption, color: colors.textMuted, textAlign: 'center' },
-  previewHint: { ...typography.caption, color: colors.textDim },
+  permissionActions: { alignSelf: 'stretch', gap: spacing.xs, marginTop: spacing.md },
+  permissionButton: { alignSelf: 'stretch' },
+  recordedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  recordedOverlayText: { ...typography.title, color: '#FFFFFF' },
+  recordedOverlayHint: { ...typography.caption, color: 'rgba(255,255,255,0.85)' },
   controls: { flexDirection: 'row', gap: spacing.sm },
   flipButton: { flex: 1 },
   recordButton: { flex: 1.4 },
-  permissionButton: { marginTop: spacing.md, alignSelf: 'stretch' },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -650,9 +743,6 @@ const styles = StyleSheet.create({
   },
   statusText: { flex: 1, ...typography.caption, color: colors.textMuted },
   recordingBadge: {
-    position: 'absolute',
-    top: spacing.md,
-    left: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs + 2,
@@ -663,6 +753,81 @@ const styles = StyleSheet.create({
   },
   recordingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.danger },
   recordingText: { ...typography.label, color: '#FFFFFF' },
+  shortsRoot: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  shortsTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    zIndex: 2,
+  },
+  shortsCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.scrim,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shortsClosePlaceholder: { width: 40, height: 40 },
+  shortsCloseText: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
+  shortsHint: { ...typography.caption, color: 'rgba(255,255,255,0.9)' },
+  shortsBottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xl,
+    zIndex: 2,
+  },
+  shortsFlipButton: {
+    width: 64,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.md,
+    backgroundColor: colors.scrim,
+  },
+  shortsFlipButtonRemove: {
+    width: 64,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.md,
+    backgroundColor: colors.whiteAlpha[50],
+  },
+  shortsFlipText: { ...typography.label, color: '#FFFFFF' },
+  shortsControlDisabled: { opacity: 0.4 },
+  shortsRecordOuter: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shortsRecordInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.danger,
+  },
+  shortsRecordInnerActive: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+  },
 });
 
 export default PostAdScreen;
