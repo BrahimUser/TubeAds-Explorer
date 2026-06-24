@@ -17,12 +17,18 @@ import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { LanguagePickerModal } from '../components/LanguagePickerModal';
 import { NotificationsModal } from '../components/NotificationsModal';
-import { ListingVideoCard } from '../components/marketplace/ListingVideoCard';
+import { HomeQuickActions } from '../components/marketplace/HomeQuickActions';
+import { HomeSectionHeader } from '../components/marketplace/HomeSectionHeader';
+import { HomeTrustStrip } from '../components/marketplace/HomeTrustStrip';
+import { ListingFeedCard } from '../components/marketplace/ListingFeedCard';
+import { ListingRecentCard } from '../components/marketplace/ListingRecentCard';
 import { MarketplaceCategorySquares } from '../components/marketplace/MarketplaceCategorySquares';
+import { MarketplaceOverviewCard } from '../components/marketplace/MarketplaceOverviewCard';
 import { MarketplaceSearchBar } from '../components/marketplace/MarketplaceSearchBar';
 import { PopularCategoriesSection } from '../components/marketplace/PopularCategoriesSection';
 import { PromoBanner } from '../components/marketplace/PromoBanner';
-import type { CategoryId } from '../config/marketplace';
+import { TopCitiesSection } from '../components/marketplace/TopCitiesSection';
+import type { CategoryId, CityId } from '../config/marketplace';
 import { cityLabel } from '../config/marketplace';
 import type { NotificationItem } from '../data/mockNotifications';
 import { createPoller } from '../hooks/usePolling';
@@ -37,65 +43,23 @@ import { useAuthUser } from '../hooks/useAuthUser';
 import { useFavoriteIds } from '../hooks/useFavoriteIds';
 import type { RootStackParamList } from '../navigation/types';
 import { toggleFavorite } from '../services/favorites';
-import { colors, spacing, typography } from '../theme';
+import { colors, radii, spacing, typography } from '../theme';
 import type { Ad } from '../types/Ad';
 import { formatRelativeTimeEn } from '../utils/formatRelativeTimeEn';
+import {
+  computeCategoryCounts,
+  computeHomeStats,
+  computeTopCities,
+} from '../utils/homeMarketplaceStats';
 
 const LOGO = require('../../assets/images/logo.png');
 
 const W = Dimensions.get('window').width;
 const H_PAD = spacing.lg;
 const GRID_GAP = 12;
-const GRID_CARD_W = (W - H_PAD * 2 - GRID_GAP) / 2;
-const RECENT_CARD_W = W * 0.72;
+const RECENT_CARD_W = W * 0.82;
 
 type Nav = StackNavigationProp<RootStackParamList>;
-
-type HomeListingRowProps = {
-  ad: Ad;
-  width: number;
-  playingId: string | null;
-  isFavorite: boolean;
-  onTogglePlay: (id: string) => void;
-  onOpenDetail: (ad: Ad) => void;
-  onToggleFavorite: (ad: Ad) => void;
-  wrapStyle?: object;
-};
-
-const HomeListingRow = React.memo(function HomeListingRow({
-  ad,
-  width,
-  playingId,
-  isFavorite,
-  onTogglePlay,
-  onOpenDetail,
-  onToggleFavorite,
-  wrapStyle,
-}: HomeListingRowProps) {
-  const createdMs = adCreatedMs(ad);
-  const handleTogglePlay = useCallback(() => onTogglePlay(ad.id), [ad.id, onTogglePlay]);
-  const handleOpenDetail = useCallback(() => onOpenDetail(ad), [ad, onOpenDetail]);
-  const handleToggleFavorite = useCallback(
-    () => onToggleFavorite(ad),
-    [ad, onToggleFavorite],
-  );
-
-  return (
-    <View style={wrapStyle}>
-      <ListingVideoCard
-        ad={ad}
-        width={width}
-        isPlaying={playingId === ad.id}
-        onTogglePlay={handleTogglePlay}
-        showNewBadge={isNewAd(ad)}
-        relativeTimeLabel={formatRelativeTimeEn(createdMs)}
-        onOpenDetail={handleOpenDetail}
-        isFavorite={isFavorite}
-        onToggleFavorite={handleToggleFavorite}
-      />
-    </View>
-  );
-});
 
 function adCreatedMs(ad: Ad): number | null {
   return apiDateToMs(ad.createdAt);
@@ -117,6 +81,7 @@ export function HomeMarketplaceScreen({ isFocused = true }: Props) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const [category, setCategory] = useState<CategoryId | null>(null);
+  const [cityFilter, setCityFilter] = useState<CityId | null>(null);
   const [query, setQuery] = useState('');
   const [promoVisible, setPromoVisible] = useState(true);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -129,6 +94,9 @@ export function HomeMarketplaceScreen({ isFocused = true }: Props) {
   const { ids: favoriteIds } = useFavoriteIds(user?.uid ?? null, { enabled: isFocused });
   const favoriteIdsRef = useRef(favoriteIds);
   favoriteIdsRef.current = favoriteIds;
+
+  const scrollRef = useRef<ScrollView>(null);
+  const listingsOffsetRef = useRef(0);
 
   const { ads, loading, error } = useAds({ category, enabled: isFocused });
 
@@ -158,9 +126,13 @@ export function HomeMarketplaceScreen({ isFocused = true }: Props) {
   }, [user?.uid, isFocused]);
 
   const filtered = useMemo(() => {
+    let list = ads;
+    if (cityFilter) {
+      list = list.filter((a) => a.city === cityFilter);
+    }
     const q = query.trim().toLowerCase();
-    if (!q) return ads;
-    return ads.filter((a) => {
+    if (!q) return list;
+    return list.filter((a) => {
       const city = cityLabel(a.city).toLowerCase();
       return (
         a.title.toLowerCase().includes(q) ||
@@ -168,7 +140,11 @@ export function HomeMarketplaceScreen({ isFocused = true }: Props) {
         city.includes(q)
       );
     });
-  }, [ads, query]);
+  }, [ads, query, cityFilter]);
+
+  const homeStats = useMemo(() => computeHomeStats(ads), [ads]);
+  const categoryCounts = useMemo(() => computeCategoryCounts(ads), [ads]);
+  const topCities = useMemo(() => computeTopCities(ads), [ads]);
 
   const recentAds = useMemo(() => filtered.slice(0, 12), [filtered]);
   const recommendedAds = useMemo(() => {
@@ -234,43 +210,97 @@ export function HomeMarketplaceScreen({ isFocused = true }: Props) {
     const label = user.shopName?.trim() || user.displayName?.trim() || 'U';
     return label.charAt(0).toUpperCase();
   }, [user]);
+
   const dismissPromo = useCallback(() => setPromoVisible(false), []);
-  const onSelectCategory = useCallback((id: CategoryId) => setCategory(id), []);
+  const onSelectCategory = useCallback((id: CategoryId) => {
+    setCategory(id);
+    setCityFilter(null);
+  }, []);
+  const clearFilters = useCallback(() => {
+    setCategory(null);
+    setCityFilter(null);
+    setQuery('');
+    setPlayingId(null);
+  }, []);
+
+  const onListingsLayout = useCallback((y: number) => {
+    listingsOffsetRef.current = y;
+  }, []);
+
+  const scrollToListings = useCallback(() => {
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, listingsOffsetRef.current - spacing.sm),
+      animated: true,
+    });
+  }, []);
+
+  const onQuickAction = useCallback(
+    (id: 'sell' | 'favorites' | 'messages' | 'browse') => {
+      switch (id) {
+        case 'sell':
+          publish();
+          break;
+        case 'favorites':
+          navigation.navigate('Main', { tab: 'favorites' });
+          break;
+        case 'messages':
+          navigation.navigate('Main', { tab: 'messages' });
+          break;
+        case 'browse':
+          clearFilters();
+          requestAnimationFrame(() => scrollToListings());
+          break;
+      }
+    },
+    [publish, navigation, clearFilters, scrollToListings],
+  );
+
+  const onSelectCity = useCallback((cityId: CityId) => {
+    setCityFilter(cityId);
+    setQuery('');
+  }, []);
 
   const renderRecentItem = useCallback(
-    ({ item }: { item: Ad }) => (
-      <HomeListingRow
-        ad={item}
-        width={RECENT_CARD_W}
-        playingId={playingId}
-        isFavorite={favoriteIds.has(item.id)}
-        onTogglePlay={togglePlay}
-        onOpenDetail={onOpenDetail}
-        onToggleFavorite={onToggleFavorite}
-        wrapStyle={styles.recentItemWrap}
-      />
-    ),
+    ({ item }: { item: Ad }) => {
+      const createdMs = adCreatedMs(item);
+      return (
+        <ListingRecentCard
+          ad={item}
+          width={RECENT_CARD_W}
+          isPlaying={playingId === item.id}
+          onTogglePlay={() => togglePlay(item.id)}
+          showNewBadge={isNewAd(item)}
+          relativeTimeLabel={formatRelativeTimeEn(createdMs)}
+          onOpenDetail={() => onOpenDetail(item)}
+          isFavorite={favoriteIds.has(item.id)}
+          onToggleFavorite={() => onToggleFavorite(item)}
+          style={styles.recentItemWrap}
+        />
+      );
+    },
     [playingId, favoriteIds, togglePlay, onOpenDetail, onToggleFavorite],
   );
 
-  const renderGridItem = useCallback(
-    ({ item }: { item: Ad }) => (
-      <HomeListingRow
-        ad={item}
-        width={GRID_CARD_W}
-        playingId={playingId}
-        isFavorite={favoriteIds.has(item.id)}
-        onTogglePlay={togglePlay}
-        onOpenDetail={onOpenDetail}
-        onToggleFavorite={onToggleFavorite}
-        wrapStyle={styles.gridItemWrap}
-      />
-    ),
+  const renderFeedItem = useCallback(
+    ({ item }: { item: Ad }) => {
+      const createdMs = adCreatedMs(item);
+      return (
+        <ListingFeedCard
+          ad={item}
+          isPlaying={playingId === item.id}
+          onTogglePlay={() => togglePlay(item.id)}
+          showNewBadge={isNewAd(item)}
+          relativeTimeLabel={formatRelativeTimeEn(createdMs)}
+          onOpenDetail={() => onOpenDetail(item)}
+          isFavorite={favoriteIds.has(item.id)}
+          onToggleFavorite={() => onToggleFavorite(item)}
+        />
+      );
+    },
     [playingId, favoriteIds, togglePlay, onOpenDetail, onToggleFavorite],
   );
 
   const recentKeyExtractor = useCallback((item: Ad) => item.id, []);
-  const gridKeyExtractor = useCallback((item: Ad) => item.id, []);
 
   return (
     <View style={[styles.root, rootPadding]}>
@@ -325,13 +355,41 @@ export function HomeMarketplaceScreen({ isFocused = true }: Props) {
       <MarketplaceSearchBar value={query} onChangeText={setQuery} />
 
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         nestedScrollEnabled
       >
         <View style={styles.catPad}>
-          <MarketplaceCategorySquares value={category} onChange={setCategory} />
+          <MarketplaceCategorySquares
+            value={category}
+            onChange={(id) => {
+              setCategory(id);
+              setCityFilter(null);
+            }}
+          />
         </View>
+
+        {!loading && !error && ads.length > 0 ? (
+          <MarketplaceOverviewCard stats={homeStats} />
+        ) : null}
+
+        <HomeQuickActions onAction={onQuickAction} />
+
+        {(category || cityFilter) && !loading ? (
+          <View style={styles.filterBar}>
+            <Text style={styles.filterText} numberOfLines={1}>
+              {category
+                ? t('home.showingCategory', { category: t(`categories.${category}`) })
+                : cityFilter
+                  ? t('home.showingCity', { city: cityLabel(cityFilter) })
+                  : ''}
+            </Text>
+            <TouchableOpacity onPress={clearFilters} hitSlop={8}>
+              <Text style={styles.filterClear}>{t('home.clearFilter')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         <PromoBanner
           visible={promoVisible}
@@ -339,6 +397,12 @@ export function HomeMarketplaceScreen({ isFocused = true }: Props) {
           onPublish={publish}
         />
 
+        <HomeTrustStrip />
+
+        <View
+          collapsable={false}
+          onLayout={(e) => onListingsLayout(e.nativeEvent.layout.y)}
+        >
         {loading ? (
           <View style={styles.loader}>
             <ActivityIndicator color={colors.marketplaceOrange} size="large" />
@@ -347,7 +411,10 @@ export function HomeMarketplaceScreen({ isFocused = true }: Props) {
           <Text style={styles.err}>{error.message}</Text>
         ) : (
           <>
-            <Text style={styles.sectionTitle}>{t('sections.recent')}</Text>
+            <HomeSectionHeader
+              title={t('sections.recent')}
+              subtitle={t('home.recentSubtitle', { count: recentAds.length })}
+            />
             {recentAds.length === 0 ? (
               <Text style={styles.empty}>{t('home.emptyListings')}</Text>
             ) : (
@@ -366,28 +433,27 @@ export function HomeMarketplaceScreen({ isFocused = true }: Props) {
               />
             )}
 
-            <PopularCategoriesSection onSelectCategory={onSelectCategory} />
+            <PopularCategoriesSection
+              onSelectCategory={onSelectCategory}
+              categoryCounts={categoryCounts}
+            />
+
+            <TopCitiesSection cities={topCities} onSelectCity={onSelectCity} />
 
             {recommendedAds.length > 0 ? (
-              <>
-                <Text style={styles.sectionTitle}>{t('sections.recommended')}</Text>
-                <FlatList
-                  data={recommendedAds}
-                  keyExtractor={gridKeyExtractor}
-                  renderItem={renderGridItem}
-                  numColumns={2}
-                  scrollEnabled={false}
-                  columnWrapperStyle={styles.gridRow}
-                  contentContainerStyle={styles.gridList}
-                  initialNumToRender={6}
-                  maxToRenderPerBatch={6}
-                  windowSize={5}
-                  removeClippedSubviews
+              <View style={styles.feedSection}>
+                <HomeSectionHeader
+                  title={t('sections.recommended')}
+                  subtitle={t('home.recommendedSubtitle')}
                 />
-              </>
+                {recommendedAds.map((ad) => (
+                  <React.Fragment key={ad.id}>{renderFeedItem({ item: ad })}</React.Fragment>
+                ))}
+              </View>
             ) : null}
           </>
         )}
+        </View>
         <View style={styles.scrollFooter} />
       </ScrollView>
     </View>
@@ -462,31 +528,44 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.marketplaceTitle,
   },
-  scrollContent: { paddingTop: spacing.sm },
-  scrollFooter: { height: spacing.xxl + 8 },
-  catPad: { marginTop: spacing.sm },
-  sectionTitle: {
-    ...typography.title,
-    fontSize: 18,
-    fontWeight: '800',
+  filterBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginHorizontal: H_PAD,
     marginBottom: spacing.md,
-    color: colors.marketplaceTitle,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.brandSubtle,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 88, 12, 0.2)',
+    gap: spacing.sm,
   },
+  filterText: {
+    ...typography.caption,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.marketplaceTitle,
+    flex: 1,
+  },
+  filterClear: {
+    ...typography.caption,
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.marketplaceOrange,
+  },
+  scrollContent: { paddingTop: spacing.md },
+  scrollFooter: { height: spacing.xxl + 8 },
+  catPad: { marginBottom: spacing.sm },
   hList: {
     paddingHorizontal: H_PAD,
     paddingBottom: spacing.lg,
   },
   recentItemWrap: { marginEnd: GRID_GAP },
-  gridList: {
-    paddingHorizontal: H_PAD,
-    paddingBottom: spacing.md,
+  feedSection: {
+    marginTop: spacing.sm,
   },
-  gridRow: {
-    gap: GRID_GAP,
-    marginBottom: spacing.md,
-  },
-  gridItemWrap: { flex: 1 },
   loader: { paddingVertical: spacing.xxl, alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg },
   err: {
     ...typography.body,

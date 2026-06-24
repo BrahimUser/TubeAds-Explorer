@@ -51,7 +51,45 @@
     "notifications": "Notifications",
     "profile": "Profile",
     "filters": "Filters",
-    "promoDismiss": "Close promo"
+    "promoDismiss": "Close promo",
+    "tagline": "Video listings across Morocco — buy and sell with confidence",
+    "greetingSignedIn": "Welcome back",
+    "greetingGuest": "Discover deals near you",
+    "promoBadge": "FREE TO POST",
+    "stats": {
+      "title": "At a glance",
+      "listings": "Active listings",
+      "newThisWeek": "New this week",
+      "cities": "Cities covered",
+      "categories": "Categories",
+      "listingsShort": "Listings",
+      "newShort": "New",
+      "citiesShort": "Cities",
+      "categoriesShort": "Categories"
+    },
+    "quickActions": {
+      "sell": "Sell",
+      "favorites": "Saved",
+      "messages": "Chat",
+      "browse": "Browse"
+    },
+    "trust": {
+      "video": "Video previews",
+      "videoDesc": "See items before you buy",
+      "local": "Local sellers",
+      "localDesc": "Listings across Morocco",
+      "chat": "In-app chat",
+      "chatDesc": "Message sellers directly"
+    },
+    "topCities": "Top cities",
+    "topCitiesSubtitle": "Where listings are most active",
+    "popularSubtitle": "Browse by category",
+    "recentSubtitle": "{{count}} fresh listings",
+    "recommendedSubtitle": "More picks you might like",
+    "showingCategory": "Showing {{category}}",
+    "showingCity": "Showing {{city}}",
+    "clearFilter": "Clear",
+    "listingsCount": "{{count}} listings"
   },
   "account": {
     "title": "Account",
