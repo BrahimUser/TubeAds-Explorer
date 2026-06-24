@@ -10,6 +10,7 @@ import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import { LOCALE_STORAGE_KEY, SUPPORTED_LANGUAGES, applyLanguageToDocument } from '../i18n';
 import { useUnreadNotificationsCount } from '../queries/useNotifications';
 import { Icon } from './Icons';
+import HeaderSearch from './search/HeaderSearch';
 
 const LANGS = [
   { code: 'en', label: 'EN', flag: '🇬🇧' },
@@ -59,9 +60,7 @@ export default function Header({
   transparent = false,
   locale,
   onLocaleChange,
-  searchQuery = '',
-  onSearchChange,
-  onSearchSubmit,
+  onOpenListing,
 }) {
   const { t, i18n } = useTranslation();
   const { user, signOut, role } = useAuth();
@@ -164,26 +163,7 @@ export default function Header({
               </span>
             </a>
 
-            <form
-              role="search"
-              className="hidden min-w-0 flex-1 md:block"
-              onSubmit={(e) => {
-                e.preventDefault();
-                onSearchSubmit?.();
-              }}
-            >
-              <label className="mx-auto flex h-11 w-full max-w-2xl items-center gap-2 rounded-full border border-slate-200 bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.06)] lg:mx-0 lg:max-w-none">
-                <Icon name="search" className="h-5 w-5 shrink-0 text-slate-400" />
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange?.(e.target.value)}
-                  placeholder={t('navbar.searchPlaceholder')}
-                  aria-label={t('navbar.search')}
-                  className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none"
-                />
-              </label>
-            </form>
+            <HeaderSearch onOpenListing={onOpenListing} className="hidden md:block" />
 
             <div className="ms-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
               <button
@@ -455,26 +435,7 @@ export default function Header({
             </div>
           </div>
 
-          <form
-            role="search"
-            className="pb-2 md:hidden"
-            onSubmit={(e) => {
-              e.preventDefault();
-              onSearchSubmit?.();
-            }}
-          >
-            <label className="flex h-11 w-full items-center gap-2 rounded-full border border-slate-200 bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-              <Icon name="search" className="h-5 w-5 shrink-0 text-slate-400" />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => onSearchChange?.(e.target.value)}
-                placeholder={t('navbar.searchPlaceholder')}
-                aria-label={t('navbar.search')}
-                className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none"
-              />
-            </label>
-          </form>
+          <HeaderSearch onOpenListing={onOpenListing} className="pb-2 md:hidden" />
         </div>
 
         <nav

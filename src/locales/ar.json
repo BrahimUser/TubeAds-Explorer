@@ -154,7 +154,15 @@
     "adminDashboard": "لوحة الإشراف",
     "listings": "الإعلانات",
     "home": "الرئيسية",
-    "mobileNav": "تصفح الجوال"
+    "mobileNav": "تصفح الجوال",
+    "searchDropdown": {
+      "loading": "جارٍ البحث…",
+      "empty": "لا توجد إعلانات تطابق «{{query}}».",
+      "error": "فشل البحث. يرجى المحاولة مرة أخرى.",
+      "retry": "إعادة المحاولة",
+      "clear": "مسح البحث",
+      "resultsAria": "{{count}} نتيجة بحث"
+    }
   },
   "myAds": {
     "pageTitle": "إعلاناتي",

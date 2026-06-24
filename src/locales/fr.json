@@ -154,7 +154,15 @@
     "adminDashboard": "Dashboard admin",
     "listings": "Annonces",
     "home": "Accueil",
-    "mobileNav": "Navigation mobile"
+    "mobileNav": "Navigation mobile",
+    "searchDropdown": {
+      "loading": "Recherche…",
+      "empty": "Aucune annonce ne correspond à « {{query}} ».",
+      "error": "La recherche a échoué. Veuillez réessayer.",
+      "retry": "Réessayer",
+      "clear": "Effacer la recherche",
+      "resultsAria": "{{count}} résultats de recherche"
+    }
   },
   "myAds": {
     "pageTitle": "Mes annonces",

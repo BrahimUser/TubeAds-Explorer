@@ -1,5 +1,15 @@
 import { body, param, query } from 'express-validator';
 
+export const searchListingsValidator = [
+  query('q')
+    .trim()
+    .notEmpty()
+    .withMessage('Search query is required')
+    .isLength({ min: 3, max: 100 })
+    .withMessage('Search query must be between 3 and 100 characters'),
+  query('limit').optional().isInt({ min: 1, max: 10 }),
+];
+
 export const listListingsValidator = [
   query('page').optional().isInt({ min: 1 }),
   query('limit').optional().isInt({ min: 1, max: 120 }),

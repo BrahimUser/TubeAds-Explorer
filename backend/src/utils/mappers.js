@@ -49,6 +49,19 @@ export function mapListing(listing) {
   };
 }
 
+export function mapListingSearchHit(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title,
+    thumbnailUrl: row.thumbnailUrl || '',
+    priceCents: row.priceCents,
+    currency: row.currency || 'MAD',
+    category: row.category || '',
+    city: row.city || '',
+  };
+}
+
 export function mapFavorite(fav) {
   return {
     id: fav.id,
