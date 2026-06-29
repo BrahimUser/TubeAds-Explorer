@@ -509,9 +509,6 @@ export default function ProductDetailPage({
                         <Icon name="phone" className="h-5 w-5" />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                          {t('product.sellerPhone')}
-                        </p>
                         <p className="truncate text-base font-extrabold text-slate-900 tabular-nums" dir="ltr">
                           {sellerPhone}
                         </p>
