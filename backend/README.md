@@ -169,3 +169,7 @@ Import [postman/Marketplace-API.postman_collection.json](postman/Marketplace-API
 ## Frontend migration
 
 See [FRONTEND_MIGRATION.md](../FRONTEND_MIGRATION.md).
+
+## Production (O2switch)
+
+See [DEPLOY-O2SWITCH.md](DEPLOY-O2SWITCH.md) for cPanel / Phusion Passenger deployment.

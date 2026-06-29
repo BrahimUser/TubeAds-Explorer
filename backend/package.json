@@ -3,14 +3,20 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js",
+    "start": "node server.js",
+    "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio",
-    "youtube:oauth": "node scripts/youtube-oauth-setup.js"
+    "youtube:oauth": "node scripts/youtube-oauth-setup.js",
+    "package:o2switch": "bash scripts/package-o2switch.sh"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
@@ -25,11 +31,9 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
+    "prisma": "^6.9.0",
     "socket.io": "^4.8.3",
     "uuid": "^11.1.0"
-  },
-  "devDependencies": {
-    "prisma": "^6.9.0"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
