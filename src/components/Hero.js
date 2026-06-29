@@ -44,6 +44,7 @@ export default function Hero({
   selectedCity,
   onCityChange,
   onSubmit,
+  onCreateAd,
 }) {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
@@ -105,6 +106,25 @@ export default function Hero({
             >
               {t('hero.subtitle')}
             </p>
+
+            <div className="mt-5 sm:mt-6">
+              <button
+                type="button"
+                onClick={() => onCreateAd?.()}
+                className="inline-flex items-center gap-2.5 rounded-full bg-brand-500 px-7 py-3.5 text-base font-extrabold text-white shadow-[0_8px_28px_rgba(247,107,28,0.4)] transition hover:bg-brand-600 hover:shadow-[0_10px_32px_rgba(247,107,28,0.45)] sm:px-9 sm:py-4 sm:text-lg"
+              >
+                <Icon name="plus" className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" />
+                {t('hero.cta')}
+              </button>
+              <p
+                className="mt-2 text-xs text-slate-600 sm:text-sm"
+                style={{
+                  textShadow: '0 1px 1px rgba(255,255,255,0.7)',
+                }}
+              >
+                {t('hero.ctaHint')}
+              </p>
+            </div>
 
             <form
               className="mt-6 sm:mt-7"

@@ -468,6 +468,7 @@ function Shell() {
           goShop(user.uid);
         }}
         onAdminDashboard={goAdminDashboard}
+        onCreateAd={openCreateAd}
         transparent={isHomeMarketplace}
       />
 
@@ -552,6 +553,7 @@ function Shell() {
             cityFilter={cityFilter}
             onCityChange={setCityFilter}
             onHeroSearchSubmit={() => scrollToId('listings')}
+            onCreateAd={openCreateAd}
             onRequireLogin={requireLogin}
             onPlay={openVideoPlayer}
             onOpenListing={goListingDetail}

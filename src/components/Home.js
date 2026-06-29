@@ -20,6 +20,7 @@ export default function Home({
   cityFilter,
   onCityChange,
   onHeroSearchSubmit,
+  onCreateAd,
   onRequireLogin,
   onPlay,
   onOpenListing,
@@ -42,6 +43,7 @@ export default function Home({
             selectedCity={cityFilter}
             onCityChange={onCityChange}
             onSubmit={onHeroSearchSubmit}
+            onCreateAd={onCreateAd}
           />
           <div id="categories">
             <CategoryGrid selected={category} onSelect={onCategoryChange} />

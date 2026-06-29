@@ -39,6 +39,8 @@
     "cityAria": "City",
     "allCities": "All cities",
     "submit": "Search",
+    "cta": "Sell on Marketplace",
+    "ctaHint": "Free listing with photos and video",
     "stats": {
       "ads": "10K+ Listings",
       "users": "5K+ Users",
@@ -155,6 +157,7 @@
     "adminDashboard": "Admin dashboard",
     "listings": "Listings",
     "home": "Home",
+    "postAd": "Post an ad",
     "mobileNav": "Mobile navigation",
     "searchDropdown": {
       "loading": "Searching…",

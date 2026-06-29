@@ -39,6 +39,8 @@
     "cityAria": "المدينة",
     "allCities": "كل المدن",
     "submit": "بحث",
+    "cta": "بع على السوق",
+    "ctaHint": "إعلان مجاني مع صور وفيديو",
     "stats": {
       "ads": "+10 آلاف إعلان",
       "users": "+5 آلاف مستخدم",
@@ -155,6 +157,7 @@
     "adminDashboard": "لوحة الإشراف",
     "listings": "الإعلانات",
     "home": "الرئيسية",
+    "postAd": "انشر إعلانك",
     "mobileNav": "تصفح الجوال",
     "searchDropdown": {
       "loading": "جارٍ البحث…",

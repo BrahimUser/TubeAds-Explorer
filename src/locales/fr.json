@@ -39,6 +39,8 @@
     "cityAria": "Ville",
     "allCities": "Toute la ville",
     "submit": "Rechercher",
+    "cta": "Vendre sur Marketplace",
+    "ctaHint": "Annonce gratuite avec photos et vidéo",
     "stats": {
       "ads": "10K+ Annonces",
       "users": "5K+ Utilisateurs",
@@ -155,6 +157,7 @@
     "adminDashboard": "Dashboard admin",
     "listings": "Annonces",
     "home": "Accueil",
+    "postAd": "Publier une annonce",
     "mobileNav": "Navigation mobile",
     "searchDropdown": {
       "loading": "Recherche…",
