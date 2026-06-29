@@ -8,6 +8,7 @@ import { useListing } from '../queries/useListings';
 import { useUser } from '../queries/useUsers';
 import { useCreateChatThread } from '../mutations/useChat';
 import { categoryLabel, cityLabel } from '../services/categories';
+import { resolveAdVideoPlayback } from '../services/listings';
 import { normalizeUserProfile } from '../services/users';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import { DEFAULT_LANGUAGE } from '../i18n';
@@ -91,6 +92,44 @@ function buildSpecRows(ad, t, lang) {
   return rows;
 }
 
+function GalleryVideo({ ad, t }) {
+  const playback = resolveAdVideoPlayback(ad);
+
+  if (playback.kind === 'youtube') {
+    return (
+      <div className="relative aspect-[4/3] w-full bg-black sm:aspect-[16/10]">
+        <iframe
+          key={playback.youtubeVideoId}
+          src={`https://www.youtube.com/embed/${playback.youtubeVideoId}?modestbranding=1&rel=0&playsinline=1`}
+          title={ad.title || t('videoPlayer.adVideo')}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+          allowFullScreen
+          className="absolute inset-0 h-full w-full"
+        />
+      </div>
+    );
+  }
+
+  if (playback.kind === 'direct') {
+    return (
+      <video
+        key={playback.videoUrl}
+        src={playback.videoUrl}
+        poster={ad.thumbnailUrl || undefined}
+        controls
+        playsInline
+        className="aspect-[4/3] w-full bg-black object-contain sm:aspect-[16/10]"
+      />
+    );
+  }
+
+  return (
+    <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-100 text-slate-400 sm:aspect-[16/10]">
+      {t('videoPlayer.noVideo')}
+    </div>
+  );
+}
+
 export default function ProductDetailPage({
   listingId,
   onBack,
@@ -117,15 +156,23 @@ export default function ProductDetailPage({
   const contacting = createChatThread.isPending;
   const resolvedSeller = seller ?? (ad?.ownerUid ? normalizeUserProfile(ad.ownerUid, null) : null);
 
+  const hasVideo = Boolean(ad?.youtubeVideoId) || Boolean(ad?.videoUrl);
+
   const images = useMemo(() => {
     if (!ad) return [];
     const list = Array.isArray(ad.imageUrls) && ad.imageUrls.length > 0 ? ad.imageUrls : [];
     if (list.length > 0) return list;
-    if (ad.thumbnailUrl) return [ad.thumbnailUrl];
+    if (ad.thumbnailUrl && !hasVideo) return [ad.thumbnailUrl];
     return [];
-  }, [ad]);
+  }, [ad, hasVideo]);
 
-  const hasVideo = Boolean(ad?.youtubeVideoId) || Boolean(ad?.videoUrl);
+  const mediaItems = useMemo(() => {
+    const items = [];
+    if (hasVideo) items.push({ type: 'video' });
+    for (const url of images) items.push({ type: 'image', url });
+    return items;
+  }, [hasVideo, images]);
+
   const specRows = useMemo(() => (ad ? buildSpecRows(ad, t, lang) : []), [ad, t, lang]);
   const isOwner = !!user && ad && user.uid === ad.ownerUid;
 
@@ -152,17 +199,17 @@ export default function ProductDetailPage({
   }
 
   const goPrev = useCallback(() => {
-    setActiveIndex((i) => (images.length ? (i - 1 + images.length) % images.length : 0));
-  }, [images.length]);
+    setActiveIndex((i) => (mediaItems.length ? (i - 1 + mediaItems.length) % mediaItems.length : 0));
+  }, [mediaItems.length]);
 
   const goNext = useCallback(() => {
-    setActiveIndex((i) => (images.length ? (i + 1) % images.length : 0));
-  }, [images.length]);
+    setActiveIndex((i) => (mediaItems.length ? (i + 1) % mediaItems.length : 0));
+  }, [mediaItems.length]);
 
-  const canNavigateImages = images.length > 1;
+  const canNavigateMedia = mediaItems.length > 1;
 
   useEffect(() => {
-    if (!canNavigateImages) return undefined;
+    if (!canNavigateMedia) return undefined;
     function onKey(e) {
       const target = e.target;
       if (
@@ -184,9 +231,10 @@ export default function ProductDetailPage({
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [canNavigateImages, goPrev, goNext]);
+  }, [canNavigateMedia, goPrev, goNext]);
 
-  const mainSrc = images[activeIndex] || '';
+  const activeItem = mediaItems[activeIndex];
+  const videoPoster = ad?.thumbnailUrl || images[0] || '';
 
   if (status === 'loading') {
     return (
@@ -263,20 +311,22 @@ export default function ProductDetailPage({
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-10 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="min-w-0 space-y-5">
             <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50 shadow-sm">
-              {mainSrc ? (
-                <img src={mainSrc} alt="" className="aspect-[4/3] w-full object-contain sm:aspect-[16/10]" />
+              {activeItem?.type === 'video' ? (
+                <GalleryVideo ad={ad} t={t} />
+              ) : activeItem?.type === 'image' ? (
+                <img src={activeItem.url} alt="" className="aspect-[4/3] w-full object-contain sm:aspect-[16/10]" />
               ) : (
                 <div className="flex aspect-[4/3] w-full items-center justify-center text-slate-400">
                   {t('common.noImage')}
                 </div>
               )}
-              {images.length > 1 && (
+              {canNavigateMedia && (
                 <>
                   <button
                     type="button"
                     aria-label={t('product.previousImage')}
                     onClick={goPrev}
-                    className="absolute start-2 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-slate-200/90 bg-white/95 text-slate-700 shadow-md transition hover:bg-white"
+                    className="absolute start-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-slate-200/90 bg-white/95 text-slate-700 shadow-md transition hover:bg-white"
                   >
                     <Icon name="chevronDown" className="h-5 w-5 rotate-90 rtl:-rotate-90" />
                   </button>
@@ -284,48 +334,51 @@ export default function ProductDetailPage({
                     type="button"
                     aria-label={t('product.nextImage')}
                     onClick={goNext}
-                    className="absolute end-2 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-slate-200/90 bg-white/95 text-slate-700 shadow-md transition hover:bg-white"
+                    className="absolute end-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-slate-200/90 bg-white/95 text-slate-700 shadow-md transition hover:bg-white"
                   >
                     <Icon name="chevronDown" className="h-5 w-5 -rotate-90 rtl:rotate-90" />
                   </button>
                 </>
               )}
-              {images.length > 0 && (
-                <span className="absolute bottom-3 end-3 rounded-md bg-slate-900/75 px-2 py-1 text-xs font-semibold text-white">
-                  {activeIndex + 1}/{images.length}
+              {mediaItems.length > 0 && (
+                <span className="absolute bottom-3 end-3 z-10 rounded-md bg-slate-900/75 px-2 py-1 text-xs font-semibold text-white">
+                  {activeIndex + 1}/{mediaItems.length}
                 </span>
               )}
             </div>
 
-            {images.length > 1 && (
+            {canNavigateMedia && (
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {images.map((url, i) => (
+                {mediaItems.map((item, i) => (
                   <button
-                    key={`${url}-${i}`}
+                    key={item.type === 'video' ? 'video' : `${item.url}-${i}`}
                     type="button"
                     onClick={() => setActiveIndex(i)}
+                    aria-label={item.type === 'video' ? t('product.watchVideo') : undefined}
                     className={
                       'relative h-16 w-20 shrink-0 overflow-hidden rounded-lg ring-2 ring-offset-2 transition ' +
                       (i === activeIndex ? 'ring-brand-500' : 'ring-transparent hover:ring-slate-200')
                     }
                   >
-                    <img src={url} alt="" className="h-full w-full object-cover" />
+                    {item.type === 'video' ? (
+                      videoPoster ? (
+                        <img src={videoPoster} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full bg-slate-800" />
+                      )
+                    ) : (
+                      <img src={item.url} alt="" className="h-full w-full object-cover" />
+                    )}
+                    {item.type === 'video' && (
+                      <span className="absolute inset-0 grid place-items-center bg-black/30">
+                        <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-500 text-white shadow">
+                          <Icon name="play" className="ml-0.5 h-4 w-4" />
+                        </span>
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
-            )}
-
-            {hasVideo && (
-              <button
-                type="button"
-                onClick={() => onPlay?.(ad)}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 shadow-sm transition hover:border-brand-300 hover:bg-brand-50/50"
-              >
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-500 text-white shadow">
-                  <Icon name="play" className="ml-0.5 h-5 w-5" />
-                </span>
-                {t('product.watchVideo')}
-              </button>
             )}
 
             {ad.description?.trim() && (
