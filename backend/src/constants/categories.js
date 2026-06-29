@@ -1,7 +1,8 @@
 // Slim taxonomy mirror of frontend src/services/categories.js — keep labels in sync.
 export const CATEGORY_LABELS = [
-  'Vehicles',
+  'Agriculture',
   'Real Estate',
+  'Vehicles',
   'Electronics',
   'Fashion',
   'Home',

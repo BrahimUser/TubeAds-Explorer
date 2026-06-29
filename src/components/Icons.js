@@ -70,6 +70,13 @@ const ICONS = {
       <path d="M22 2 15 22l-4-9-9-4 20-7Z" />
     </svg>
   ),
+  sprout: (props) => (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M12 22V12" />
+      <path d="M12 12c-4-6-8-6-8-2 0 3 3 5 8 2" />
+      <path d="M12 12c4-6 8-6 8-2 0 3-3 5-8 2" />
+    </svg>
+  ),
   car: (props) => (
     <svg viewBox="0 0 24 24" {...base} {...props}>
       <path d="M5 17V11l2-5h10l2 5v6" />

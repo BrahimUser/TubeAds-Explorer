@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Building2, Car, Home, Laptop } from 'lucide-react-native';
+import { Building2, Car, Home, Laptop, Sprout } from 'lucide-react-native';
 import type { CategoryId } from '../../config/marketplace';
 import { POPULAR_CATEGORIES_MOCK, type PopularCategoryMock } from '../../config/marketplaceUi';
 import { colors, radii, spacing, typography } from '../../theme';
@@ -10,6 +10,8 @@ import { HomeSectionHeader } from './HomeSectionHeader';
 function BigIcon({ item }: { item: PopularCategoryMock }) {
   const common = { size: 42 as const, strokeWidth: 1.5 as const, color: item.iconColor };
   switch (item.id) {
+    case 'agriculture':
+      return <Sprout {...common} />;
     case 'vehicles':
       return <Car {...common} />;
     case 'real-estate':

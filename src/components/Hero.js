@@ -16,8 +16,9 @@ import { Icon } from './Icons';
 const HERO_BG = `${process.env.PUBLIC_URL || ''}/logo.png`;
 
 const CATEGORY_I18N_KEYS = {
-  vehicles: 'categories.vehicles',
+  agriculture: 'categories.agriculture',
   'real-estate': 'categories.realEstate',
+  vehicles: 'categories.vehicles',
   electronics: 'categories.electronics',
   fashion: 'categories.fashion',
   home: 'categories.homeGarden',

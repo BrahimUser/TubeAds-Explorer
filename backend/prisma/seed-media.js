@@ -21,6 +21,7 @@ const PEXELS_VIDEO = (id, fps = 30) => ({
 
 /** @type {Record<string, { source: string, mp4: string, poster: string, pageUrl: string }>} */
 export const STOCK_VIDEOS = {
+  agriculture: PEXELS_VIDEO(1409899, 25),
   vehicles: PEXELS_VIDEO(3571264, 30),
   vehiclesAlt: PEXELS_VIDEO(854913, 25),
   realEstate: PEXELS_VIDEO(2169880, 30),
@@ -42,6 +43,13 @@ export const STOCK_VIDEOS = {
 
 /** Product stills by marketplace category — Unsplash primary, Pexels secondary. */
 export const PRODUCT_IMAGES = {
+  Agriculture: [
+    UNSPLASH('photo-1625246333195-78d9c38ad449'),
+    UNSPLASH('photo-1500937386664-56d1dfef3074'),
+    PEXELS_PHOTO(2132247),
+    PEXELS_PHOTO(265216),
+    PEXELS_PHOTO(1329574),
+  ],
   Vehicles: [
     UNSPLASH('photo-1492144534655-ae79c964c9d7'),
     UNSPLASH('photo-1503376780353-7e6692767b70'),
@@ -148,6 +156,7 @@ export const CHAT_IMAGES = [
 
 /** Default video key per listing category when blueprint omits videoKey. */
 export const CATEGORY_VIDEO_KEY = {
+  Agriculture: 'agriculture',
   Vehicles: 'vehicles',
   'Real Estate': 'realEstate',
   Electronics: 'electronics',

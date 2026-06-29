@@ -8,16 +8,17 @@ import { Icon } from './Icons';
 
 const ROW_DEFS = [
   { id: null, tKey: 'categories.all', icon: 'grid', squareClass: 'bg-orange-50 text-orange-600 ring-1 ring-orange-100/90', isAll: true },
-  { id: 'vehicles', tKey: 'categories.vehicles', icon: 'car', squareClass: 'bg-sky-50 text-sky-600 ring-1 ring-sky-100/80' },
+  { id: 'agriculture', tKey: 'categories.agriculture', icon: 'sprout', squareClass: 'bg-lime-50 text-lime-700 ring-1 ring-lime-100/80' },
   { id: 'real-estate', tKey: 'categories.realEstate', icon: 'home', squareClass: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100/80' },
+  { id: 'vehicles', tKey: 'categories.vehicles', icon: 'car', squareClass: 'bg-sky-50 text-sky-600 ring-1 ring-sky-100/80' },
   { id: 'electronics', tKey: 'categories.electronics', icon: 'smartphone', squareClass: 'bg-violet-50 text-violet-600 ring-1 ring-violet-100/80' },
   { id: 'home', tKey: 'categories.homeGarden', icon: 'sofa', squareClass: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100/80' },
   { id: 'fashion', tKey: 'categories.fashion', icon: 'tshirt', squareClass: 'bg-pink-50 text-pink-600 ring-1 ring-pink-100/80' },
   { id: 'kids-baby', tKey: 'categories.kidsBaby', icon: 'baby', squareClass: 'bg-sky-100 text-sky-700 ring-1 ring-sky-100/80' },
-  { id: 'other', tKey: 'categories.leisureSport', icon: 'soccer', squareClass: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80' },
 ];
 
 const MORE_DEFS = [
+  { id: 'other', tKey: 'categories.leisureSport', icon: 'soccer', squareClass: 'bg-emerald-50 text-emerald-700' },
   { id: 'services', tKey: 'categories.services', icon: 'wrench', squareClass: 'bg-teal-50 text-teal-600' },
   { id: 'jobs', tKey: 'categories.jobs', icon: 'briefcase', squareClass: 'bg-indigo-50 text-indigo-600' },
   { id: 'rugs', tKey: 'categories.rugs', icon: 'rug', squareClass: 'bg-rose-50 text-rose-600' },

@@ -19,6 +19,7 @@ import {
   LayoutGrid,
   Layers,
   Shirt,
+  Sprout,
   Wrench,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -41,6 +42,7 @@ type Props = {
 function iconForCategory(id: CategoryId | null): LucideIcon {
   if (id === null) return LayoutGrid;
   const m: Record<CategoryId, LucideIcon> = {
+    agriculture: Sprout,
     rugs: Layers,
     electronics: LampDesk,
     vehicles: Car,

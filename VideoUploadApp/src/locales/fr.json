@@ -12,10 +12,11 @@
   "searchPlaceholder": "Rechercher n’importe quoi…",
   "categories": {
     "all": "Tout",
+    "agriculture": "Agriculture",
+    "real-estate": "Immobilier",
+    "vehicles": "Véhicules",
     "rugs": "Tapis",
     "electronics": "Électronique",
-    "vehicles": "Véhicules",
-    "real-estate": "Immobilier",
     "fashion": "Mode",
     "home": "Maison",
     "jobs": "Emplois",

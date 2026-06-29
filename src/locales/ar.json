@@ -49,8 +49,9 @@
   "categories": {
     "title": "تصفح حسب الفئة",
     "all": "الكل",
-    "vehicles": "مركبات",
+    "agriculture": "زراعة",
     "realEstate": "عقارات",
+    "vehicles": "مركبات",
     "electronics": "إلكترونيات",
     "homeGarden": "منزل وحديقة",
     "fashion": "أزياء",

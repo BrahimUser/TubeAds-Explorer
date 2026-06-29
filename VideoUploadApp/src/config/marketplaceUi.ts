@@ -9,8 +9,9 @@ import type { CategoryId } from './marketplace';
 
 /** Row order for top chips (reference design order first, then rest). */
 export const CATEGORY_CHIP_ORDER: CategoryId[] = [
-  'vehicles',
+  'agriculture',
   'real-estate',
+  'vehicles',
   'electronics',
   'home',
   'fashion',
@@ -27,8 +28,9 @@ export type CategoryVisual = {
 
 /** Unselected square: light tile + colored icon (reference aesthetic). */
 export const CATEGORY_VISUAL: Record<CategoryId, CategoryVisual> = {
-  vehicles: { iconBg: '#EFF6FF', iconColor: '#2563EB' },
+  agriculture: { iconBg: '#F7FEE7', iconColor: '#65A30D' },
   'real-estate': { iconBg: '#ECFDF5', iconColor: '#16A34A' },
+  vehicles: { iconBg: '#EFF6FF', iconColor: '#2563EB' },
   electronics: { iconBg: '#F3E8FF', iconColor: '#9333EA' },
   home: { iconBg: '#FEF2F2', iconColor: '#DC2626' },
   fashion: { iconBg: '#FDF2F8', iconColor: '#DB2777' },
@@ -47,16 +49,22 @@ export type PopularCategoryMock = {
 
 export const POPULAR_CATEGORIES_MOCK: PopularCategoryMock[] = [
   {
-    id: 'vehicles',
-    countLabel: '12k+',
-    tileBg: '#E0F2FE',
-    iconColor: '#0284C7',
+    id: 'agriculture',
+    countLabel: '3k+',
+    tileBg: '#ECFCCB',
+    iconColor: '#65A30D',
   },
   {
     id: 'real-estate',
     countLabel: '8k+',
     tileBg: '#DCFCE7',
     iconColor: '#16A34A',
+  },
+  {
+    id: 'vehicles',
+    countLabel: '12k+',
+    tileBg: '#E0F2FE',
+    iconColor: '#0284C7',
   },
   {
     id: 'electronics',

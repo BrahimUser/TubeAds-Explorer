@@ -49,8 +49,9 @@
   "categories": {
     "title": "Browse by category",
     "all": "All",
-    "vehicles": "Vehicles",
+    "agriculture": "Agriculture",
     "realEstate": "Real estate",
+    "vehicles": "Vehicles",
     "electronics": "Electronics",
     "homeGarden": "Home & Garden",
     "fashion": "Fashion",

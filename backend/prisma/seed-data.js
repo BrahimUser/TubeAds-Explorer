@@ -7,8 +7,9 @@
 export const SEED_USER_PASSWORD_DEFAULT = 'Seed123!';
 
 export const CATEGORY_LABELS = [
-  'Vehicles',
+  'Agriculture',
   'Real Estate',
+  'Vehicles',
   'Electronics',
   'Fashion',
   'Home',

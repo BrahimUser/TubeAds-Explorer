@@ -3,8 +3,9 @@
 // what gets stored in `listings.category`.
 
 export const CATEGORIES = [
-  { id: 'vehicles', label: 'Vehicles', icon: 'car', tone: 'bg-sky-50 text-sky-600' },
+  { id: 'agriculture', label: 'Agriculture', icon: 'sprout', tone: 'bg-lime-50 text-lime-700' },
   { id: 'real-estate', label: 'Real Estate', icon: 'home', tone: 'bg-emerald-50 text-emerald-600' },
+  { id: 'vehicles', label: 'Vehicles', icon: 'car', tone: 'bg-sky-50 text-sky-600' },
   { id: 'electronics', label: 'Electronics', icon: 'cpu', tone: 'bg-violet-50 text-violet-600' },
   { id: 'fashion', label: 'Fashion', icon: 'tshirt', tone: 'bg-pink-50 text-pink-600' },
   { id: 'home', label: 'Home', icon: 'sofa', tone: 'bg-amber-50 text-amber-600' },

@@ -11,6 +11,7 @@
  */
 
 export type CategoryId =
+  | 'agriculture'
   | 'rugs'
   | 'electronics'
   | 'vehicles'
@@ -28,10 +29,11 @@ export type Category = { id: CategoryId; label: string };
  * filter on the Home feed (handled separately — see `HomeScreen`).
  */
 export const CATEGORIES: ReadonlyArray<Category> = [
+  { id: 'agriculture', label: 'Agriculture' },
+  { id: 'real-estate', label: 'Real Estate' },
+  { id: 'vehicles', label: 'Vehicles' },
   { id: 'rugs', label: 'Rugs' },
   { id: 'electronics', label: 'Electronics' },
-  { id: 'vehicles', label: 'Vehicles' },
-  { id: 'real-estate', label: 'Real Estate' },
   { id: 'fashion', label: 'Fashion' },
   { id: 'home', label: 'Home' },
   { id: 'jobs', label: 'Jobs' },

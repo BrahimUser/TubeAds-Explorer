@@ -12,10 +12,11 @@
   "searchPlaceholder": "ابحث عن أي شيء...",
   "categories": {
     "all": "الكل",
+    "agriculture": "زراعة",
+    "real-estate": "عقارات",
+    "vehicles": "مركبات",
     "rugs": "سجاد",
     "electronics": "إلكترونيات",
-    "vehicles": "مركبات",
-    "real-estate": "عقارات",
     "fashion": "أزياء",
     "home": "المنزل",
     "jobs": "وظائف",
