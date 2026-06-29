@@ -353,7 +353,7 @@ export default function ProductDetailPage({
             </div>
 
             {canNavigateMedia && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 pt-2 pl-2 !mt-2">
                 {mediaItems.map((item, i) => (
                   <button
                     key={item.type === 'video' ? 'video' : `${item.url}-${i}`}
