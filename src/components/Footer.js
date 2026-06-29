@@ -38,6 +38,7 @@ const socialLinkBase =
 export default function Footer({ onHome, onNavigatePath }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'ar';
+  const isRtl = lang === 'ar';
   const navLinkClass =
     'block text-sm text-slate-600 transition hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 rounded-sm';
 
@@ -171,7 +172,11 @@ export default function Footer({ onHome, onNavigatePath }) {
                 </li>
               </ul>
             </div>
-            <div className="lg:text-end">
+
+            {/* Download section — direction forced to LTR so badge SVGs
+                (which are inherently LTR assets) always render correctly,
+                while text alignment is flipped per locale via inline style. */}
+            <div dir="ltr" style={{ textAlign: isRtl ? 'right' : 'left' }} className="lg:text-right">
               <h4 className="text-sm font-semibold text-slate-900">{t('footer.downloadApp')}</h4>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap lg:justify-end">
                 <a
