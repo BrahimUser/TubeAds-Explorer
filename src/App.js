@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './api/queryClient';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { fetchAuthMe } from './queries/useAuth';
+import { queryKeys } from './queries/keys';
+import { getOrCreateChatThreadForAd } from './services/chat';
+import { getAd } from './services/listings';
 import { LoadingProvider } from './context/LoadingContext';
 import Header from './components/Header';
 import Home, { HOME_LISTINGS_PREVIEW } from './components/Home';
@@ -126,6 +130,7 @@ function Shell() {
   const [videoSession, setVideoSession] = useState(null);
   const [editingAd, setEditingAd] = useState(null);
   const [createAdOpen, setCreateAdOpen] = useState(false);
+  const pendingAuthActionRef = useRef(null);
 
   const openVideoPlayer = useCallback((ad, playlist) => {
     if (!ad) return;
@@ -171,6 +176,22 @@ function Shell() {
   }, []);
 
   const requireLogin = useCallback(() => openLoginModal('signin'), [openLoginModal]);
+
+  const clearPendingAuthAction = useCallback(() => {
+    pendingAuthActionRef.current = null;
+  }, []);
+
+  const requireLoginForContactSeller = useCallback(
+    (listingId) => {
+      if (!listingId) {
+        requireLogin();
+        return;
+      }
+      pendingAuthActionRef.current = { type: 'contactSeller', listingId };
+      openLoginModal('signup');
+    },
+    [openLoginModal, requireLogin],
+  );
 
   const openCreateAd = useCallback(() => {
     if (!user) {
@@ -260,7 +281,35 @@ function Shell() {
     window.scrollTo(0, 0);
   }, []);
 
-  /** After phone OTP sign-in: return to the page the user was on, or home. */
+  const resumePendingAuthAction = useCallback(async () => {
+    const action = pendingAuthActionRef.current;
+    pendingAuthActionRef.current = null;
+    if (!action) return;
+
+    if (action.type === 'contactSeller' && action.listingId) {
+      try {
+        const session = await queryClient.fetchQuery({
+          queryKey: queryKeys.auth.me(),
+          queryFn: fetchAuthMe,
+        });
+        const currentUser = session?.user;
+        const ad = await getAd(action.listingId);
+        if (!ad) return;
+        if (currentUser?.uid && ad.ownerUid === currentUser.uid) {
+          openMessages();
+          return;
+        }
+        const threadId = await getOrCreateChatThreadForAd(ad);
+        queryClient.invalidateQueries({ queryKey: queryKeys.chat.all });
+        openMessages(threadId);
+      } catch (err) {
+        console.error('resumePendingAuthAction contactSeller', err);
+        openMessages();
+      }
+    }
+  }, [openMessages]);
+
+  /** After phone sign-in: return to the page the user was on, or home. */
   const navigateAfterPhoneLogin = useCallback(() => {
     let path = '/';
     try {
@@ -298,6 +347,17 @@ function Shell() {
     }
     window.scrollTo(0, 0);
   }, []);
+
+  const handleAuthSuccess = useCallback(async () => {
+    setLoginOpen(false);
+    navigateAfterPhoneLogin();
+    await resumePendingAuthAction();
+  }, [navigateAfterPhoneLogin, resumePendingAuthAction]);
+
+  const closeLoginModal = useCallback(() => {
+    setLoginOpen(false);
+    clearPendingAuthAction();
+  }, [clearPendingAuthAction]);
 
   useEffect(() => {
     return subscribePathname(() =>
@@ -505,7 +565,7 @@ function Shell() {
           onBack={closeListingDetail}
           onPlay={openVideoPlayer}
           onVisitShop={goShop}
-          onRequireLogin={requireLogin}
+          onRequireLogin={() => requireLoginForContactSeller(listingMatch.listingId)}
           onOpenMessages={(threadId) => openMessages(threadId)}
           onEdit={(ad) => {
             if (!user) {
@@ -628,8 +688,8 @@ function Shell() {
       <LoginModal
         open={loginOpen}
         authIntent={loginAuthIntent}
-        onClose={() => setLoginOpen(false)}
-        onSignedIn={navigateAfterPhoneLogin}
+        onClose={closeLoginModal}
+        onSignedIn={handleAuthSuccess}
       />
       <MessagesDrawer
         open={messagesOpen}

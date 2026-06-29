@@ -61,12 +61,23 @@ export default function LoginModal({ open, authIntent = 'signin', onClose, onSig
 
     try {
       if (isSignUp) {
-        await registerMutation.mutateAsync({ phone: localPhone, password });
+        try {
+          await registerMutation.mutateAsync({ phone: localPhone, password });
+        } catch (registerErr) {
+          const registerMessage =
+            registerErr?.response?.data?.message ||
+            registerErr?.message ||
+            mapFirebaseAuthError(registerErr);
+          if (/already registered/i.test(registerMessage)) {
+            await loginMutation.mutateAsync({ phone: localPhone, password });
+          } else {
+            throw registerErr;
+          }
+        }
       } else {
         await loginMutation.mutateAsync({ phone: localPhone, password });
       }
       await refreshSession?.();
-      onClose();
       onSignedIn?.();
     } catch (err) {
       setError(err?.code ? mapFirebaseAuthError(err) : err?.message || t('authModal.errors.generic'));
