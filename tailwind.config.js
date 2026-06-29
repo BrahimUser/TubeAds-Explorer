@@ -21,6 +21,7 @@ module.exports = {
       fontFamily: {
         sans: [
           'Inter',
+          'Noto Sans Arabic',
           '-apple-system',
           'BlinkMacSystemFont',
           'Segoe UI',

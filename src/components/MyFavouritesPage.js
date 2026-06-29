@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useFavoritesList } from '../queries/useFavorites';
 import { useToggleFavorite } from '../mutations/useToggleFavorite';
+import { DEFAULT_LANGUAGE } from '../i18n';
 import { Icon } from './Icons';
 
 const CURRENCY_SUFFIX = { MAD: 'MAD', EUR: '€', USD: '$' };
 
-function formatPrice(priceCents, currency = 'MAD', lang = 'fr') {
+function formatPrice(priceCents, currency = 'MAD', lang = DEFAULT_LANGUAGE) {
   const amount = (Number(priceCents) || 0) / 100;
   const localeTag = lang === 'ar' ? 'ar' : lang === 'en' ? 'en-US' : 'fr-FR';
   const grouped = Math.round(amount).toLocaleString(localeTag);
@@ -15,7 +16,7 @@ function formatPrice(priceCents, currency = 'MAD', lang = 'fr') {
   return currency === 'MAD' ? `${grouped} ${suffix}` : `${suffix}${grouped}`;
 }
 
-function formatSavedDate(ts, lang = 'fr') {
+function formatSavedDate(ts, lang = DEFAULT_LANGUAGE) {
   if (!ts) return '';
   let ms = null;
   if (typeof ts.toMillis === 'function') ms = ts.toMillis();
@@ -36,7 +37,7 @@ function listingId(fav) {
 
 export default function MyFavouritesPage({ onRequireLogin, onOpenListing, onBrowseListings }) {
   const { t, i18n } = useTranslation();
-  const lang = i18n.language || 'fr';
+  const lang = i18n.language || DEFAULT_LANGUAGE;
   const { user, ready } = useAuth();
   const { data: favorites = [], isLoading, isError, error } = useFavoritesList(user?.uid, {
     enabled: !!user?.uid,

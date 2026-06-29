@@ -32,7 +32,7 @@ function formatPrice(priceCents, currency = 'MAD') {
   return currency === 'MAD' ? `${grouped} ${suffix}` : `${suffix}${grouped}`;
 }
 
-function ListingVideoPlayer({ ad, swipeable }) {
+function ListingVideoPlayer({ ad, swipeable, t }) {
   const playback = resolveAdVideoPlayback(ad);
   const youtubeEmbedUrl =
     playback.kind === 'youtube'
@@ -46,7 +46,7 @@ function ListingVideoPlayer({ ad, swipeable }) {
           <iframe
             key={playback.youtubeVideoId}
             src={youtubeEmbedUrl}
-            title={ad.title || 'Ad video'}
+            title={ad.title || t('videoPlayer.adVideo')}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
             allowFullScreen
             className={
@@ -81,7 +81,7 @@ function ListingVideoPlayer({ ad, swipeable }) {
         />
       ) : (
         <div className="absolute inset-0 grid place-items-center text-sm text-white/70">
-          No video available for this ad.
+          {t('videoPlayer.noVideo')}
         </div>
       )}
     </div>
@@ -179,12 +179,12 @@ export default function VideoPlayerModal({
     >
       {playlist.map((item) => (
         <SwiperSlide key={item.id}>
-          <ListingVideoPlayer ad={item} swipeable />
+          <ListingVideoPlayer ad={item} swipeable t={t} />
         </SwiperSlide>
       ))}
     </Swiper>
   ) : (
-    <ListingVideoPlayer ad={ad} swipeable={false} />
+    <ListingVideoPlayer ad={ad} swipeable={false} t={t} />
   );
 
   return (

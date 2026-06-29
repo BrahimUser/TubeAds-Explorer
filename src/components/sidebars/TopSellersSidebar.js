@@ -2,15 +2,16 @@
  * “Top vendeurs” — avatars, verified badge, star ratings (deterministic when no reviews in DB).
  */
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '../Icons';
 import { ratingMeta } from '../../utils/sellerRating';
 
-function VerifiedBadge() {
+function VerifiedBadge({ t }) {
   return (
     <span
       className="absolute -bottom-0.5 -right-0.5 grid h-[18px] w-[18px] place-items-center rounded-full bg-emerald-500 text-white shadow-sm ring-2 ring-white"
-      title="Vendeur vérifié"
-      aria-label="Vendeur vérifié"
+      title={t('sellers.verified')}
+      aria-label={t('sellers.verified')}
     >
       <Icon name="check" className="h-2.5 w-2.5" />
     </span>
@@ -30,6 +31,8 @@ function StarRow({ value }) {
 }
 
 export default function TopSellersSidebar({ ads, sellerProfiles, onVisitShop, onViewAll }) {
+  const { t } = useTranslation();
+
   const rows = useMemo(() => {
     const counts = new Map();
     for (const ad of ads) {
@@ -52,7 +55,9 @@ export default function TopSellersSidebar({ ads, sellerProfiles, onVisitShop, on
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-50 text-amber-700">
             <Icon name="user" className="h-4 w-4" />
           </span>
-          <h3 className="text-sm font-extrabold tracking-tight text-slate-900">Top vendeurs</h3>
+          <h3 className="text-sm font-extrabold tracking-tight text-slate-900">
+            {t('sidebar.topSellers')}
+          </h3>
         </div>
         {onViewAll && (
           <button
@@ -60,7 +65,7 @@ export default function TopSellersSidebar({ ads, sellerProfiles, onVisitShop, on
             onClick={() => onViewAll()}
             className="shrink-0 text-xs font-semibold text-brand-600 hover:text-brand-700"
           >
-            Voir tout
+            {t('common.viewAll')}
           </button>
         )}
       </div>
@@ -69,7 +74,7 @@ export default function TopSellersSidebar({ ads, sellerProfiles, onVisitShop, on
           const prof = sellerProfiles[ownerUid];
           const name =
             prof?.shopName?.trim() ||
-            `Vendeur ${String(ownerUid).slice(0, 5)}…`;
+            t('sidebar.sellerFallback', { id: String(ownerUid).slice(0, 5) });
           const logo = prof?.shopLogoUrl;
           const { rating, reviews } = ratingMeta(ownerUid);
           return (
@@ -77,7 +82,7 @@ export default function TopSellersSidebar({ ads, sellerProfiles, onVisitShop, on
               <button
                 type="button"
                 onClick={() => onVisitShop?.(ownerUid)}
-                className="flex w-full items-center gap-3 rounded-xl border border-transparent p-2 text-left transition hover:border-slate-100 hover:bg-slate-50"
+                className="flex w-full items-center gap-3 rounded-xl border border-transparent p-2 text-start transition hover:border-slate-100 hover:bg-slate-50"
               >
                 <span className="relative shrink-0">
                   <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-slate-100 text-sm font-bold text-slate-600 ring-1 ring-slate-200">
@@ -87,18 +92,21 @@ export default function TopSellersSidebar({ ads, sellerProfiles, onVisitShop, on
                       name.slice(0, 1).toUpperCase()
                     )}
                   </span>
-                  <VerifiedBadge />
+                  <VerifiedBadge t={t} />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="truncate text-[13px] font-semibold text-slate-900">{name}</span>
                   <span className="mt-1 flex flex-wrap items-center gap-2">
                     <StarRow value={rating} />
                     <span className="text-[11px] font-medium tabular-nums text-slate-600">
-                      {rating} ({reviews} avis)
+                      {rating} {t('sellers.reviews', { count: reviews })}
                     </span>
                   </span>
                 </span>
-                <Icon name="chevronDown" className="-rotate-90 h-4 w-4 shrink-0 text-slate-400" />
+                <Icon
+                  name="chevronDown"
+                  className="-rotate-90 rtl:rotate-90 h-4 w-4 shrink-0 text-slate-400"
+                />
               </button>
             </li>
           );

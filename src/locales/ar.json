@@ -85,7 +85,54 @@
   "videoPlayer": {
     "previousListing": "الإعلان السابق",
     "nextListing": "الإعلان التالي",
-    "position": "{{current}} / {{total}}"
+    "position": "{{current}} / {{total}}",
+    "noVideo": "لا يتوفر فيديو لهذا الإعلان.",
+    "adVideo": "فيديو الإعلان"
+  },
+  "messages": {
+    "title": "الرسائل",
+    "closeAria": "إغلاق الرسائل",
+    "sellerFallback": "البائع",
+    "sellerWithId": "بائع · {{id}}…",
+    "preparingInbox": "جارٍ تجهيز صندوق الوارد…",
+    "indexBuilding": "يقوم Firestore بإنشاء الفهرس لقائمة محادثاتك. يستغرق ذلك عادةً من 1 إلى 5 دقائق. ستُحدَّث الصفحة تلقائيًا عند الجاهزية — لا حاجة لإعادة التحميل.",
+    "loadFailed": "تعذر تحميل المحادثات: {{message}}",
+    "emptyThreads": "لا توجد محادثات بعد. اضغط «الاتصال بالبائع» من أي إعلان.",
+    "selectThread": "اختر محادثة لعرض الرسائل.",
+    "aboutProduct": "بخصوص: {{title}}",
+    "conversation": "محادثة",
+    "emptyChat": "رحّب بالبائع — ستصل رسالتك إليه أيضًا على الهاتف.",
+    "sendFailed": "فشل الإرسال: {{message}}",
+    "placeholder": "اكتب رسالة…",
+    "send": "إرسال",
+    "sending": "جارٍ الإرسال…"
+  },
+  "sellers": {
+    "verified": "بائع موثّق",
+    "proAccount": "حساب احترافي",
+    "ratingAria": "التقييم {{value}}/5",
+    "reviews": "({{count}} تقييم)",
+    "listings_one": "{{count}} إعلان",
+    "listings_other": "{{count}} إعلانات",
+    "verifiedBadge": "موثّق",
+    "visitShop": "زيارة المتجر",
+    "breadcrumbHome": "الرئيسية",
+    "pageTitle": "أفضل البائعين",
+    "activeCount_one": "{{count}} بائع نشط",
+    "activeCount_other": "{{count}} بائعين نشطين",
+    "pageOf": " · صفحة {{current}}/{{total}}",
+    "empty": "لا يوجد بائعون حاليًا.",
+    "loading": "جارٍ تحميل البائعين…",
+    "backHome": "العودة إلى الرئيسية",
+    "loadFailed": "تعذر تحميل البائعين. {{message}}",
+    "emptyPublished": "لم ينشر أي بائع إعلانًا بعد.",
+    "paginationAria": "ترقيم صفحات البائعين",
+    "defaultBio": "بائع نشط في السوق. اكتشف إعلاناته ومتجره."
+  },
+  "sidebar": {
+    "popularNow": "الأكثر شعبية الآن",
+    "topSellers": "أفضل البائعين",
+    "sellerFallback": "بائع {{id}}…"
   },
   "footer": {
     "description": "أسهل طريقة للشراء والبيع بكل ثقة في جميع أنحاء المغرب.",
@@ -159,6 +206,9 @@
     "home": "الرئيسية",
     "postAd": "انشر إعلانك",
     "mobileNav": "تصفح الجوال",
+    "unreadNotifications": "{{count}} غير مقروءة",
+    "noUnreadNotifications": "لا توجد إشعارات غير مقروءة",
+    "testNotification": "اختبار: لديك رسالة جديدة",
     "searchDropdown": {
       "loading": "جارٍ البحث…",
       "empty": "لا توجد إعلانات تطابق «{{query}}».",
@@ -244,7 +294,12 @@
     "videoFormatHint": "الحد {{maxMb}} م.ب · MP4, WebM, MOV"
   },
   "shop": {
-    "publishListing": "نشر إعلان"
+    "publishListing": "نشر إعلان",
+    "defaultDescription": "اكتشف إعلانات هذا البائع. جودة وشفافية، كما في أفيتو.",
+    "backToMarket": "← العودة إلى السوق",
+    "sellerListings": "إعلانات البائع · {{count}}",
+    "emptyListings": "لا توجد إعلانات منشورة بعد.",
+    "shopFallback": "متجر · {{id}}…"
   },
   "editAd": {
     "title": "تعديل الإعلان",
@@ -507,6 +562,7 @@
     "status": {
       "pending": "قيد الانتظار",
       "confirmed": "تم تأكيدها من قِبل البائع",
+      "shipped": "تم الشحن",
       "completed": "تم التسليم",
       "cancelled": "ملغاة"
     },

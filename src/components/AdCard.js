@@ -8,15 +8,16 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useToggleFavorite } from '../mutations/useToggleFavorite';
 import { cityLabel } from '../services/categories';
+import { DEFAULT_LANGUAGE } from '../i18n';
 import { Icon } from './Icons';
 
 const CURRENCY_SUFFIX = { MAD: 'MAD', EUR: '€', USD: '$' };
 const NUMBER_LOCALE_FOR_LANG = { fr: 'fr-FR', en: 'en-US', ar: 'ar-MA' };
 
-function formatPrice(priceCents, currency = 'MAD', lang = 'fr') {
+function formatPrice(priceCents, currency = 'MAD', lang = DEFAULT_LANGUAGE) {
   if (typeof priceCents !== 'number' || Number.isNaN(priceCents)) return '—';
   const amount = priceCents / 100;
-  const grouped = Math.round(amount).toLocaleString(NUMBER_LOCALE_FOR_LANG[lang] || 'fr-FR');
+  const grouped = Math.round(amount).toLocaleString(NUMBER_LOCALE_FOR_LANG[lang] || 'ar-MA');
   const suffix = CURRENCY_SUFFIX[currency] || currency;
   return currency === 'MAD' ? `${grouped} ${suffix}` : `${suffix}${grouped}`;
 }
@@ -146,7 +147,7 @@ export default function AdCard({
   density = 'default',
 }) {
   const { t, i18n } = useTranslation();
-  const lang = i18n.language || 'fr';
+  const lang = i18n.language || DEFAULT_LANGUAGE;
   const { user } = useAuth();
   const toggleFavoriteMutation = useToggleFavorite();
   const [favorited, setFavorited] = useState(!!isFavorite);

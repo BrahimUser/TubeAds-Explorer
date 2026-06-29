@@ -7,15 +7,15 @@ import { useAuth } from '../context/AuthContext';
 import useIsAdmin from '../hooks/useIsAdmin';
 import { APP_NAME } from '../constants/branding';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
-import { LOCALE_STORAGE_KEY, SUPPORTED_LANGUAGES, applyLanguageToDocument } from '../i18n';
+import { LOCALE_STORAGE_KEY, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, applyLanguageToDocument } from '../i18n';
 import { useUnreadNotificationsCount } from '../queries/useNotifications';
 import { Icon } from './Icons';
 import HeaderSearch from './search/HeaderSearch';
 
 const LANGS = [
+  { code: 'ar', label: 'AR', flag: '🇲🇦' },
   { code: 'en', label: 'EN', flag: '🇬🇧' },
   { code: 'fr', label: 'FR', flag: '🇫🇷' },
-  { code: 'ar', label: 'AR', flag: '🇲🇦' },
 ];
 
 function accountLabel(user, fallback) {
@@ -112,7 +112,9 @@ export default function Header({
   const resolvedLocale =
     (locale && SUPPORTED_LANGUAGES.includes(locale) ? locale : null) ||
     i18n.language ||
-    (typeof window !== 'undefined' ? localStorage.getItem(LOCALE_STORAGE_KEY) || 'fr' : 'fr');
+    (typeof window !== 'undefined'
+      ? localStorage.getItem(LOCALE_STORAGE_KEY) || DEFAULT_LANGUAGE
+      : DEFAULT_LANGUAGE);
 
   function pickLang(code) {
     if (!SUPPORTED_LANGUAGES.includes(code)) return;
@@ -242,7 +244,9 @@ export default function Header({
                         {t('navbar.notifications')}
                       </div>
                       <div className="mt-0.5 text-xs text-slate-500">
-                        {unreadCount > 0 ? `${unreadCount} non lue(s)` : 'Aucune notification non lue'}
+                        {unreadCount > 0
+                          ? t('navbar.unreadNotifications', { count: unreadCount })
+                          : t('navbar.noUnreadNotifications')}
                       </div>
                     </div>
 
@@ -254,9 +258,9 @@ export default function Header({
                       onClick={() => setNotifOpen(false)}
                     >
                       <div className="text-sm font-semibold text-slate-900">
-                        Test: Vous avez un nouveau message
+                        {t('navbar.testNotification')}
                       </div>
-                      <div className="mt-0.5 text-xs text-slate-500">À l’instant</div>
+                      <div className="mt-0.5 text-xs text-slate-500">{t('card.timeJustNow')}</div>
                     </button>
                   </div>
                 )}

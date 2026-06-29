@@ -10,15 +10,16 @@ import { useCreateChatThread } from '../mutations/useChat';
 import { categoryLabel, cityLabel } from '../services/categories';
 import { normalizeUserProfile } from '../services/users';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
+import { DEFAULT_LANGUAGE } from '../i18n';
 import { Icon } from './Icons';
 
 const CURRENCY_SUFFIX = { MAD: 'MAD', EUR: '€', USD: '$' };
 const PRICE_LOCALE_FOR_LANG = { fr: 'fr-FR', en: 'en-US', ar: 'ar-MA' };
 
-function formatPrice(priceCents, currency = 'MAD', lang = 'fr') {
+function formatPrice(priceCents, currency = 'MAD', lang = DEFAULT_LANGUAGE) {
   if (typeof priceCents !== 'number' || Number.isNaN(priceCents)) return '—';
   const amount = priceCents / 100;
-  const numberLocale = PRICE_LOCALE_FOR_LANG[lang] || 'fr-FR';
+  const numberLocale = PRICE_LOCALE_FOR_LANG[lang] || 'ar-MA';
   const grouped = Math.round(amount).toLocaleString(numberLocale);
   const suffix = CURRENCY_SUFFIX[currency] || currency;
   return currency === 'MAD' ? `${grouped} ${suffix}` : `${suffix}${grouped}`;
@@ -100,7 +101,7 @@ export default function ProductDetailPage({
   onEdit,
 }) {
   const { t, i18n } = useTranslation();
-  const lang = i18n.language || 'fr';
+  const lang = i18n.language || DEFAULT_LANGUAGE;
   const { user } = useAuth();
   const { data: ad, isLoading, isError, error } = useListing(listingId);
   const { data: seller } = useUser(ad?.ownerUid, { enabled: !!ad?.ownerUid });

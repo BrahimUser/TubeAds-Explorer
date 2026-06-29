@@ -2,6 +2,7 @@
  * Contenu multilingue des pages informatives du footer.
  * fr = référence ; en / ar = traductions pour l’interface i18n.
  */
+import { DEFAULT_LANGUAGE } from '../i18n';
 
 const PAGES = {
   '/qui-sommes-nous': {
@@ -914,13 +915,13 @@ const PAGES = {
   },
 };
 
-const LANGS = ['fr', 'en', 'ar'];
+const LANGS = ['ar', 'en', 'fr'];
 
-export function getFooterPageContent(path, lang = 'fr') {
+export function getFooterPageContent(path, lang = DEFAULT_LANGUAGE) {
   const page = PAGES[path];
   if (!page) return null;
-  const code = String(lang || 'fr').split('-')[0].toLowerCase();
-  return page[LANGS.includes(code) ? code : 'fr'];
+  const code = String(lang || DEFAULT_LANGUAGE).split('-')[0].toLowerCase();
+  return page[LANGS.includes(code) ? code : DEFAULT_LANGUAGE];
 }
 
 /** Titres + descriptions FR pour les info-bulles du footer (compat). */

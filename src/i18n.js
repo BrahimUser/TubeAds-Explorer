@@ -1,5 +1,5 @@
 /**
- * i18n configuration — supports French (default), English, and Arabic.
+ * i18n configuration — supports Arabic (default), English, and French.
  * Persists the chosen language in localStorage under `marketplace-locale`
  * (same key already used by the Header language switcher).
  */
@@ -11,11 +11,12 @@ import en from './locales/en.json';
 import ar from './locales/ar.json';
 
 export const LOCALE_STORAGE_KEY = 'marketplace-locale';
-export const SUPPORTED_LANGUAGES = ['fr', 'en', 'ar'];
+export const DEFAULT_LANGUAGE = 'ar';
+export const SUPPORTED_LANGUAGES = ['ar', 'en', 'fr'];
 export const RTL_LANGUAGES = ['ar'];
 
 function detectInitialLanguage() {
-  if (typeof window === 'undefined') return 'fr';
+  if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
   try {
     const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
     if (saved && SUPPORTED_LANGUAGES.includes(saved)) return saved;
@@ -23,9 +24,10 @@ function detectInitialLanguage() {
     /* localStorage may be unavailable (private mode / SSR) */
   }
   const navLang =
-    (typeof navigator !== 'undefined' && (navigator.language || navigator.userLanguage)) || 'fr';
+    (typeof navigator !== 'undefined' && (navigator.language || navigator.userLanguage)) ||
+    DEFAULT_LANGUAGE;
   const short = navLang.toLowerCase().slice(0, 2);
-  return SUPPORTED_LANGUAGES.includes(short) ? short : 'fr';
+  return SUPPORTED_LANGUAGES.includes(short) ? short : DEFAULT_LANGUAGE;
 }
 
 export function isRtlLanguage(lang) {
@@ -49,7 +51,7 @@ i18n
       ar: { translation: ar },
     },
     lng: initialLanguage,
-    fallbackLng: 'fr',
+    fallbackLng: DEFAULT_LANGUAGE,
     supportedLngs: SUPPORTED_LANGUAGES,
     interpolation: {
       escapeValue: false,

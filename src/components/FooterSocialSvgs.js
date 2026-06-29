@@ -2,6 +2,66 @@
  * Icônes réseaux sociaux (glyphs proches des logos officiels) — SVG inline.
  */
 
+const BADGE_COPY = {
+  en: {
+    googlePlay: { line1: 'GET IT ON', line2: 'Google Play' },
+    appStore: { line1: 'Download on the', line2: 'App Store' },
+  },
+  fr: {
+    googlePlay: { line1: 'DISPONIBLE SUR', line2: 'Google Play' },
+    appStore: { line1: "Télécharger dans l'", line2: 'App Store' },
+  },
+  ar: {
+    googlePlay: { line1: 'احصل عليه من', line2: 'Google Play' },
+    appStore: { line1: 'تنزيل على', line2: 'App Store' },
+  },
+};
+
+function badgeLang(lang) {
+  const code = String(lang || 'ar').split('-')[0].toLowerCase();
+  return BADGE_COPY[code] ? code : 'en';
+}
+
+function badgeFont(lang) {
+  return badgeLang(lang) === 'ar'
+    ? 'Noto Sans Arabic, system-ui, sans-serif'
+    : 'system-ui, sans-serif';
+}
+
+function GooglePlayIcon() {
+  return (
+    <>
+      <path d="M14 13 L14 41 L35 27 Z" fill="url(#gpGradFooter)" />
+      <path d="M14 13 L35 27 L27 33 L14 13 Z" fill="#3DDC84" />
+      <path d="M14 41 L27 21 L35 27 L14 41 Z" fill="#FFC107" />
+      <path d="M27 21 L35 27 L27 33 Z" fill="#FF5722" />
+      <defs>
+        <linearGradient
+          id="gpGradFooter"
+          x1="14"
+          y1="13"
+          x2="35"
+          y2="41"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#00D4FF" />
+          <stop offset="1" stopColor="#4285F4" />
+        </linearGradient>
+      </defs>
+    </>
+  );
+}
+
+function AppStoreIcon() {
+  return (
+    <path
+      fill="#fff"
+      transform="translate(12, 11) scale(1.15)"
+      d="M15.768 12.5c-.03-3.02 2.407-4.484 2.514-4.54a5.218 5.218 0 0 0-4.128-2.254c-1.766-.179-3.432 1.045-4.322 1.045-.904 0-2.268-1.016-3.738-.988a5.486 5.486 0 0 0-4.655 2.813c-1.982 3.437-.504 8.513 1.406 11.302.942 1.363 2.063 2.895 3.529 2.841 1.415-.057 1.948-.917 3.658-.917 1.693 0 2.182.917 3.663.887 1.514-.025 2.476-1.378 3.398-2.755 1.072-1.556 1.512-3.074 1.538-3.151-.033-.015-2.948-1.133-2.976-4.486zm2.842-8.232a5.038 5.038 0 0 0 1.155-3.597c-1.118.066-2.483.745-3.291 1.688-.766.887-1.436 2.306-1.256 3.676 1.328.103 2.672-.674 3.392-1.767z"
+    />
+  );
+}
+
 export function FacebookOfficialIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden {...props}>
@@ -34,51 +94,39 @@ export function YouTubeOfficialIcon(props) {
   );
 }
 
-export function GooglePlayBadgeSvg({ className }) {
+export function GooglePlayBadgeSvg({ className, lang = 'ar' }) {
+  const code = badgeLang(lang);
+  const copy = BADGE_COPY[code].googlePlay;
+  const font = badgeFont(code);
+
   return (
     <svg className={className} viewBox="0 0 180 54" xmlns="http://www.w3.org/2000/svg" aria-hidden>
       <rect width="180" height="54" rx="10" fill="#000" />
-      <path d="M14 13 L14 41 L35 27 Z" fill="url(#gpGradFooter)" />
-      <path d="M14 13 L35 27 L27 33 L14 13 Z" fill="#3DDC84" />
-      <path d="M14 41 L27 21 L35 27 L14 41 Z" fill="#FFC107" />
-      <path d="M27 21 L35 27 L27 33 Z" fill="#FF5722" />
-      <defs>
-        <linearGradient
-          id="gpGradFooter"
-          x1="14"
-          y1="13"
-          x2="35"
-          y2="41"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#00D4FF" />
-          <stop offset="1" stopColor="#4285F4" />
-        </linearGradient>
-      </defs>
-      <text x="48" y="22" fill="#fff" fontSize="9" fontFamily="system-ui, sans-serif">
-        DISPONIBLE SUR
+      <GooglePlayIcon />
+      <text x="48" y="22" fill="#fff" fontSize="9" fontFamily={font}>
+        {copy.line1}
       </text>
-      <text x="48" y="40" fill="#fff" fontSize="17" fontWeight="700" fontFamily="system-ui, sans-serif">
-        Google Play
+      <text x="48" y="40" fill="#fff" fontSize="17" fontWeight="700" fontFamily={font}>
+        {copy.line2}
       </text>
     </svg>
   );
 }
 
-export function AppStoreBadgeSvg({ className }) {
+export function AppStoreBadgeSvg({ className, lang = 'ar' }) {
+  const code = badgeLang(lang);
+  const copy = BADGE_COPY[code].appStore;
+  const font = badgeFont(code);
+
   return (
     <svg className={className} viewBox="0 0 180 54" xmlns="http://www.w3.org/2000/svg" aria-hidden>
       <rect width="180" height="54" rx="10" fill="#000" />
-      <path
-        fill="#fff"
-        transform="translate(12, 11) scale(1.15)"
-        d="M15.768 12.5c-.03-3.02 2.407-4.484 2.514-4.54a5.218 5.218 0 0 0-4.128-2.254c-1.766-.179-3.432 1.045-4.322 1.045-.904 0-2.268-1.016-3.738-.988a5.486 5.486 0 0 0-4.655 2.813c-1.982 3.437-.504 8.513 1.406 11.302.942 1.363 2.063 2.895 3.529 2.841 1.415-.057 1.948-.917 3.658-.917 1.693 0 2.182.917 3.663.887 1.514-.025 2.476-1.378 3.398-2.755 1.072-1.556 1.512-3.074 1.538-3.151-.033-.015-2.948-1.133-2.976-4.486zm2.842-8.232a5.038 5.038 0 0 0 1.155-3.597c-1.118.066-2.483.745-3.291 1.688-.766.887-1.436 2.306-1.256 3.676 1.328.103 2.672-.674 3.392-1.767z"
-      />
-      <text x="52" y="22" fill="#fff" fontSize="9" fontFamily="system-ui, sans-serif">
-        Télécharger sur l’
+      <AppStoreIcon />
+      <text x="52" y="22" fill="#fff" fontSize="9" fontFamily={font}>
+        {copy.line1}
       </text>
-      <text x="52" y="40" fill="#fff" fontSize="17" fontWeight="700" fontFamily="system-ui, sans-serif">
-        App Store
+      <text x="52" y="40" fill="#fff" fontSize="17" fontWeight="700" fontFamily={font}>
+        {copy.line2}
       </text>
     </svg>
   );

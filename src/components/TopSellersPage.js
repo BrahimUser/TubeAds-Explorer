@@ -10,6 +10,7 @@
  * l'utilisateur clique sur « Voir tout » à côté de Top vendeurs.
  */
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { adIsVisibleOnPublicHome } from '../services/listings';
 import { useApprovedListings } from '../queries/useListings';
 import { useSellerProfiles } from '../queries/useUsers';
@@ -19,10 +20,10 @@ import { Icon } from './Icons';
 
 const PAGE_SIZE = 12;
 
-function StarRow({ value, size = 'h-3.5 w-3.5' }) {
+function StarRow({ value, size = 'h-3.5 w-3.5', t }) {
   const full = Number.isFinite(value) ? Math.min(5, Math.round(value)) : 5;
   return (
-    <span className="flex items-center gap-0.5 text-amber-400" aria-label={`Note ${value}/5`}>
+    <span className="flex items-center gap-0.5 text-amber-400" aria-label={t('sellers.ratingAria', { value })}>
       {[0, 1, 2, 3, 4].map((i) => (
         <Icon key={i} name={i < full ? 'starFilled' : 'star'} className={size} />
       ))}
@@ -30,21 +31,22 @@ function StarRow({ value, size = 'h-3.5 w-3.5' }) {
   );
 }
 
-function VerifiedBadge() {
+function VerifiedBadge({ t }) {
   return (
     <span
       className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-white shadow-md ring-2 ring-white"
-      title="Vendeur vérifié"
-      aria-label="Vendeur vérifié"
+      title={t('sellers.verified')}
+      aria-label={t('sellers.verified')}
     >
       <Icon name="check" className="h-3.5 w-3.5" />
     </span>
   );
 }
 
-function SellerCard({ seller, profile, onVisitShop }) {
+function SellerCard({ seller, profile, onVisitShop, t }) {
   const name =
-    profile?.shopName?.trim() || `Vendeur · ${String(seller.ownerUid).slice(0, 6)}…`;
+    profile?.shopName?.trim() ||
+    t('messages.sellerWithId', { id: String(seller.ownerUid).slice(0, 6) });
   const description = profile?.shopDescription?.trim();
   const initial = (name[0] || '?').toUpperCase();
   const isPro = !!profile?.isPro;
@@ -67,7 +69,7 @@ function SellerCard({ seller, profile, onVisitShop }) {
               </span>
             )}
           </span>
-          <VerifiedBadge />
+          <VerifiedBadge t={t} />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -77,25 +79,24 @@ function SellerCard({ seller, profile, onVisitShop }) {
             {isPro && (
               <span
                 className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white"
-                title="Compte Pro"
+                title={t('sellers.proAccount')}
               >
                 Pro
               </span>
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <StarRow value={rating} />
+            <StarRow value={rating} t={t} />
             <span className="text-xs font-semibold tabular-nums text-slate-700">
               {rating.toFixed(1)}
             </span>
-            <span className="text-xs text-slate-500">({reviews} avis)</span>
+            <span className="text-xs text-slate-500">{t('sellers.reviews', { count: reviews })}</span>
           </div>
         </div>
       </div>
 
       <p className="mt-3 line-clamp-2 min-h-[2.25rem] text-xs leading-relaxed text-slate-500">
-        {description ||
-          'Vendeur Marketplace actif. Découvrez ses annonces et boutique.'}
+        {description || t('sellers.defaultBio')}
       </p>
 
       <div className="mt-3 flex items-center justify-between gap-2 text-xs font-medium text-slate-500">
@@ -107,12 +108,12 @@ function SellerCard({ seller, profile, onVisitShop }) {
             <span className="font-extrabold text-slate-900 tabular-nums">
               {seller.count}
             </span>{' '}
-            annonce{seller.count !== 1 ? 's' : ''}
+            {t('sellers.listings', { count: seller.count })}
           </span>
         </span>
         <span className="inline-flex items-center gap-1 text-emerald-600">
           <Icon name="shield" className="h-3.5 w-3.5" />
-          <span className="text-[11px] font-semibold">Vérifié</span>
+          <span className="text-[11px] font-semibold">{t('sellers.verifiedBadge')}</span>
         </span>
       </div>
 
@@ -121,8 +122,8 @@ function SellerCard({ seller, profile, onVisitShop }) {
         onClick={() => onVisitShop?.(seller.ownerUid)}
         className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-brand-500 bg-white py-2.5 text-sm font-extrabold text-brand-600 transition hover:bg-brand-50"
       >
-        Visiter la boutique
-        <Icon name="chevronDown" className="h-4 w-4 -rotate-90" />
+        {t('sellers.visitShop')}
+        <Icon name="chevronDown" className="h-4 w-4 -rotate-90 rtl:rotate-90" />
       </button>
     </article>
   );
@@ -166,6 +167,7 @@ function buildPageList(current, total) {
 }
 
 export default function TopSellersPage({ onClose, onNavigateHome, onVisitShop }) {
+  const { t } = useTranslation();
   const { data: ads = [], isLoading, isError, error } = useApprovedListings();
   const [page, setPage] = useState(1);
 
@@ -210,10 +212,10 @@ export default function TopSellersPage({ onClose, onNavigateHome, onVisitShop })
             onClick={onNavigateHome}
             className="font-medium text-brand-600 hover:text-brand-700"
           >
-            Accueil
+            {t('sellers.breadcrumbHome')}
           </button>
           <span aria-hidden className="text-slate-300">/</span>
-          <span className="font-semibold text-slate-900">Meilleurs vendeurs</span>
+          <span className="font-semibold text-slate-900">{t('sellers.pageTitle')}</span>
         </nav>
 
         <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
@@ -223,19 +225,20 @@ export default function TopSellersPage({ onClose, onNavigateHome, onVisitShop })
                 <Icon name="user" className="h-5 w-5" />
               </span>
               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                Meilleurs vendeurs
+                {t('sellers.pageTitle')}
               </h1>
             </div>
             <p className="mt-2 text-sm text-slate-500 tabular-nums">
               {status === 'ready' && sellers.length > 0 && (
                 <>
-                  {sellers.length} vendeur{sellers.length !== 1 ? 's' : ''} actif
-                  {sellers.length !== 1 ? 's' : ''}
-                  {totalPages > 1 ? ` · page ${safePage}/${totalPages}` : ''}
+                  {t('sellers.activeCount', { count: sellers.length })}
+                  {totalPages > 1
+                    ? t('sellers.pageOf', { current: safePage, total: totalPages })
+                    : ''}
                 </>
               )}
-              {status === 'ready' && sellers.length === 0 && 'Aucun vendeur pour le moment.'}
-              {status === 'loading' && 'Chargement des vendeurs…'}
+              {status === 'ready' && sellers.length === 0 && t('sellers.empty')}
+              {status === 'loading' && t('sellers.loading')}
             </p>
           </div>
 
@@ -244,8 +247,8 @@ export default function TopSellersPage({ onClose, onNavigateHome, onVisitShop })
             onClick={onClose}
             className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
           >
-            <Icon name="chevronDown" className="h-4 w-4 rotate-90" />
-            Retour à l’accueil
+            <Icon name="chevronDown" className="h-4 w-4 rotate-90 rtl:-rotate-90" />
+            {t('sellers.backHome')}
           </button>
         </header>
 
@@ -262,13 +265,13 @@ export default function TopSellersPage({ onClose, onNavigateHome, onVisitShop })
 
         {status === 'error' && (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-            Impossible de charger les vendeurs. {error?.message || ''}
+            {t('sellers.loadFailed', { message: error?.message || '' })}
           </div>
         )}
 
         {status === 'ready' && sellers.length === 0 && (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center text-slate-600">
-            Aucun vendeur n’a publié d’annonce pour le moment.
+            {t('sellers.emptyPublished')}
           </div>
         )}
 
@@ -281,6 +284,7 @@ export default function TopSellersPage({ onClose, onNavigateHome, onVisitShop })
                   seller={s}
                   profile={profiles[s.ownerUid]}
                   onVisitShop={onVisitShop}
+                  t={t}
                 />
               ))}
             </div>
@@ -288,15 +292,15 @@ export default function TopSellersPage({ onClose, onNavigateHome, onVisitShop })
             {totalPages > 1 && (
               <nav
                 role="navigation"
-                aria-label="Pagination des vendeurs"
+                aria-label={t('sellers.paginationAria')}
                 className="mt-10 flex flex-wrap items-center justify-center gap-1.5"
               >
                 <PageButton
-                  ariaLabel="Page précédente"
+                  ariaLabel={t('common.previousPage')}
                   disabled={safePage === 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
-                  <Icon name="chevronDown" className="h-4 w-4 rotate-90" />
+                  <Icon name="chevronDown" className="h-4 w-4 rotate-90 rtl:-rotate-90" />
                 </PageButton>
                 {items.map((it, i) =>
                   it === '…' ? (
@@ -319,11 +323,11 @@ export default function TopSellersPage({ onClose, onNavigateHome, onVisitShop })
                   ),
                 )}
                 <PageButton
-                  ariaLabel="Page suivante"
+                  ariaLabel={t('common.nextPage')}
                   disabled={safePage === totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 >
-                  <Icon name="chevronDown" className="h-4 w-4 -rotate-90" />
+                  <Icon name="chevronDown" className="h-4 w-4 -rotate-90 rtl:rotate-90" />
                 </PageButton>
               </nav>
             )}

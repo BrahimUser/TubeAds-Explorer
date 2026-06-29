@@ -20,6 +20,7 @@ import ShopPage from './components/ShopPage';
 import ProductDetailPage from './components/ProductDetailPage';
 import TopSellersPage from './components/TopSellersPage';
 import {
+  DEFAULT_LANGUAGE,
   LOCALE_STORAGE_KEY,
   SUPPORTED_LANGUAGES,
   applyLanguageToDocument,
@@ -74,10 +75,12 @@ function Shell() {
       : 'home';
   });
   const [locale, setLocaleState] = useState(() => {
-    if (typeof window === 'undefined') return 'fr';
+    if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
     const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
     if (saved && SUPPORTED_LANGUAGES.includes(saved)) return saved;
-    return i18n.language && SUPPORTED_LANGUAGES.includes(i18n.language) ? i18n.language : 'fr';
+    return i18n.language && SUPPORTED_LANGUAGES.includes(i18n.language)
+      ? i18n.language
+      : DEFAULT_LANGUAGE;
   });
 
   const setLocale = useCallback(

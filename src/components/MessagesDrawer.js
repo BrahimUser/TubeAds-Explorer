@@ -1,5 +1,6 @@
 // Slide-in messages panel. Thread list and messages update in real time via Socket.IO.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useChatThreads, useChatMessages } from '../queries/useChat';
 import { useSendMessage } from '../mutations/useChat';
@@ -23,17 +24,17 @@ function formatTime(ts) {
   });
 }
 
-function formatRelative(ts) {
+function formatRelative(ts, translate) {
   const ms = tsMs(ts);
   if (ms == null) return '';
   const minutes = Math.round((Date.now() - ms) / 60000);
-  if (minutes < 1) return "À l'instant";
-  if (minutes < 60) return `Il y a ${minutes} min`;
+  if (minutes < 1) return translate('card.timeJustNow');
+  if (minutes < 60) return translate('card.timeMinutesAgo', { minutes });
   const h = Math.round(minutes / 60);
-  if (h < 24) return `Il y a ${h} h`;
+  if (h < 24) return translate('card.timeHoursAgo', { hours: h });
   const d = Math.round(h / 24);
-  if (d < 14) return `Il y a ${d} j`;
-  return `Il y a ${Math.round(d / 7)} sem.`;
+  if (d < 14) return translate('card.timeDaysAgo', { days: d });
+  return translate('card.timeWeeksAgo', { weeks: Math.round(d / 7) });
 }
 
 function isIndexBuildingError(err) {
@@ -57,11 +58,11 @@ function otherUidFor(thread, myUid) {
   return '';
 }
 
-function displayNameFor(uid, profile) {
+function displayNameFor(uid, profile, translate) {
   const name = profile?.shopName?.trim();
   if (name) return name;
-  if (!uid) return 'Vendeur';
-  return `Vendeur · ${uid.slice(0, 6)}…`;
+  if (!uid) return translate('messages.sellerFallback');
+  return translate('messages.sellerWithId', { id: uid.slice(0, 6) });
 }
 
 function avatarInitial(name) {
@@ -77,6 +78,7 @@ export default function MessagesDrawer({
   onRequireLogin,
   initialThreadId = null,
 }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [activeId, setActiveId] = useState(null);
   const [mounted, setMounted] = useState(open);
@@ -142,17 +144,17 @@ export default function MessagesDrawer({
     >
       <aside
         className={
-          'absolute right-0 top-0 h-full w-full sm:w-[796px] max-w-full bg-white shadow-2xl flex flex-col ' +
+          'absolute end-0 top-0 h-full w-full sm:w-[796px] max-w-full bg-white shadow-2xl flex flex-col ' +
           'transition-transform duration-300 ease-out motion-reduce:transition-none ' +
-          (visible ? 'translate-x-0' : 'translate-x-full')
+          (visible ? 'translate-x-0' : 'ltr:translate-x-full rtl:-translate-x-full')
         }
       >
         <header className="flex items-center justify-between px-5 h-14 border-b border-slate-200">
-          <h2 className="font-bold text-slate-900">Messages</h2>
+          <h2 className="font-bold text-slate-900">{t('messages.title')}</h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close messages"
+            aria-label={t('messages.closeAria')}
             className="p-2 -m-2 text-slate-500 hover:text-slate-800"
           >
             <Icon name="close" />
@@ -166,13 +168,14 @@ export default function MessagesDrawer({
           setActiveId={setActiveId}
           loading={isLoading}
           error={isError ? error : null}
+          t={t}
         />
       </aside>
     </div>
   );
 }
 
-function DrawerBody({ user, threads, activeId, setActiveId, loading, error }) {
+function DrawerBody({ user, threads, activeId, setActiveId, loading, error, t }) {
   const otherUids = useMemo(() => {
     const set = new Set();
     for (const t of threads) {
@@ -193,12 +196,14 @@ function DrawerBody({ user, threads, activeId, setActiveId, loading, error }) {
         onSelect={setActiveId}
         loading={loading}
         error={error}
+        t={t}
       />
       <ChatPane
         key={activeId || 'empty'}
         user={user}
         thread={threads.find((t) => t.id === activeId) || null}
         profiles={profiles}
+        t={t}
       />
     </div>
   );
@@ -214,18 +219,15 @@ function ThreadListSkeleton() {
   );
 }
 
-function IndexBuildingNotice() {
+function IndexBuildingNotice({ t }) {
   return (
     <div className="border-r border-slate-200 p-4 space-y-3">
       <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
         <span className="inline-block h-3 w-3 rounded-full border-2 border-brand-500 border-r-transparent animate-spin" />
-        Préparation de la boîte de réception…
+        {t('messages.preparingInbox')}
       </div>
       <p className="text-xs leading-relaxed text-slate-500">
-        Firestore est en train de créer l’index pour la liste de vos
-        conversations. Cela prend généralement&nbsp;1&nbsp;à&nbsp;5&nbsp;minutes.
-        La page se mettra à jour automatiquement dès que ce sera prêt — pas
-        besoin de rafraîchir.
+        {t('messages.indexBuilding')}
       </p>
       <ul className="space-y-1.5">
         {Array.from({ length: 3 }).map((_, i) => (
@@ -240,40 +242,44 @@ function IndexBuildingNotice() {
   );
 }
 
-function ThreadList({ user, profiles, threads, activeId, onSelect, loading, error }) {
+function ThreadList({ user, profiles, threads, activeId, onSelect, loading, error, t }) {
   if (loading) return <ThreadListSkeleton />;
 
   if (error && isIndexBuildingError(error)) {
-    return <IndexBuildingNotice />;
+    return <IndexBuildingNotice t={t} />;
   }
   if (error) {
     return (
       <div className="border-r border-slate-200 p-4 text-sm text-red-700">
-        Impossible de charger les conversations : {error.message}
+        {t('messages.loadFailed', { message: error.message })}
       </div>
     );
   }
   if (threads.length === 0) {
     return (
       <div className="border-r border-slate-200 p-4 text-sm text-slate-500">
-        Aucune conversation pour l’instant. Cliquez sur « Contacter le vendeur » depuis une annonce.
+        {t('messages.emptyThreads')}
       </div>
     );
   }
   return (
     <ul className="border-r border-slate-200 overflow-y-auto">
-      {threads.map((t) => {
-        const active = t.id === activeId;
-        const otherUid = otherUidFor(t, user?.uid);
+      {threads.map((thread) => {
+        const active = thread.id === activeId;
+        const otherUid = otherUidFor(thread, user?.uid);
         const profile = profiles?.[otherUid];
-        const name = displayNameFor(otherUid, profile);
-        const time = formatRelative(t.lastMessageAt || t.updatedAt || t.createdAt);
-        const subtitle = t.lastMessageText?.trim() || t.productTitle || t.priceLabel || '';
+        const name = displayNameFor(otherUid, profile, t);
+        const time = formatRelative(
+          thread.lastMessageAt || thread.updatedAt || thread.createdAt,
+          t,
+        );
+        const subtitle =
+          thread.lastMessageText?.trim() || thread.productTitle || thread.priceLabel || '';
         return (
-          <li key={t.id}>
+          <li key={thread.id}>
             <button
               type="button"
-              onClick={() => onSelect(t.id)}
+              onClick={() => onSelect(thread.id)}
               className={
                 'w-full flex items-center gap-3 px-3 py-3 text-left border-b border-slate-100 transition ' +
                 (active ? 'bg-brand-50/60' : 'hover:bg-slate-50')
@@ -281,9 +287,9 @@ function ThreadList({ user, profiles, threads, activeId, onSelect, loading, erro
             >
               <div className="relative shrink-0">
                 <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden">
-                  {t.productThumb ? (
+                  {thread.productThumb ? (
                     <img
-                      src={t.productThumb}
+                      src={thread.productThumb}
                       alt=""
                       className="w-full h-full object-cover"
                     />
@@ -318,9 +324,9 @@ function ThreadList({ user, profiles, threads, activeId, onSelect, loading, erro
                     </span>
                   )}
                 </div>
-                {t.productTitle && (
+                {thread.productTitle && (
                   <div className="text-[11px] font-medium text-slate-500 truncate">
-                    {t.productTitle}
+                    {thread.productTitle}
                   </div>
                 )}
                 <div className="text-xs text-slate-500 truncate">
@@ -335,7 +341,7 @@ function ThreadList({ user, profiles, threads, activeId, onSelect, loading, erro
   );
 }
 
-function ChatPane({ user, thread, profiles }) {
+function ChatPane({ user, thread, profiles, t }) {
   const [draft, setDraft] = useState('');
   const scrollerRef = useRef(null);
   const sendMessage = useSendMessage();
@@ -346,7 +352,7 @@ function ChatPane({ user, thread, profiles }) {
 
   const otherUid = thread ? otherUidFor(thread, user?.uid) : '';
   const otherProfile = otherUid ? profiles?.[otherUid] : null;
-  const otherName = displayNameFor(otherUid, otherProfile);
+  const otherName = displayNameFor(otherUid, otherProfile, t);
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -359,7 +365,7 @@ function ChatPane({ user, thread, profiles }) {
   if (!thread) {
     return (
       <div className="grid place-items-center text-sm text-slate-500 p-6">
-        Sélectionnez une conversation pour afficher les messages.
+        {t('messages.selectThread')}
       </div>
     );
   }
@@ -405,7 +411,9 @@ function ChatPane({ user, thread, profiles }) {
             {otherName}
           </div>
           <div className="text-xs text-slate-500 truncate">
-            {thread.productTitle ? `À propos de : ${thread.productTitle}` : 'Conversation'}
+            {thread.productTitle
+              ? t('messages.aboutProduct', { title: thread.productTitle })
+              : t('messages.conversation')}
           </div>
         </div>
         <div className="hidden sm:flex items-center gap-2 shrink-0">
@@ -462,7 +470,7 @@ function ChatPane({ user, thread, profiles }) {
                     (mine ? 'text-white/80 text-right' : 'text-slate-500')
                   }
                 >
-                  {formatTime(m.createdAt || m.timestamp) || (mine ? 'Envoi…' : '')}
+                  {formatTime(m.createdAt || m.timestamp) || (mine ? t('messages.sending') : '')}
                 </div>
               </div>
             </div>
@@ -470,14 +478,16 @@ function ChatPane({ user, thread, profiles }) {
         })}
         {sortedMessages.length === 0 && (
           <div className="text-center text-xs text-slate-400 py-6">
-            Dites bonjour au vendeur — votre message lui arrivera aussi sur mobile.
+            {t('messages.emptyChat')}
           </div>
         )}
       </div>
 
       {sendError && (
         <div className="px-4 pb-1 text-xs font-medium text-red-600">
-          Échec de l’envoi : {sendError.message || String(sendError)}
+          {t('messages.sendFailed', {
+            message: sendError.message || String(sendError),
+          })}
         </div>
       )}
 
@@ -489,17 +499,19 @@ function ChatPane({ user, thread, profiles }) {
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Écrivez un message…"
+          placeholder={t('messages.placeholder')}
           className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-200"
         />
         <button
           type="submit"
           disabled={!draft.trim() || sendMessage.isPending}
           className="inline-flex items-center gap-2 rounded-full bg-brand-500 hover:bg-brand-600 text-white px-4 h-10 text-sm font-bold disabled:opacity-50 transition"
-          aria-label="Envoyer"
+          aria-label={t('messages.send')}
         >
           <Icon name="send" className="w-4 h-4" />
-          <span className="hidden sm:inline">{sendMessage.isPending ? 'Envoi…' : 'Envoyer'}</span>
+          <span className="hidden sm:inline">
+            {sendMessage.isPending ? t('messages.sending') : t('messages.send')}
+          </span>
         </button>
       </form>
     </div>

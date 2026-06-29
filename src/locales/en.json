@@ -85,7 +85,54 @@
   "videoPlayer": {
     "previousListing": "Previous listing",
     "nextListing": "Next listing",
-    "position": "{{current}} / {{total}}"
+    "position": "{{current}} / {{total}}",
+    "noVideo": "No video available for this ad.",
+    "adVideo": "Ad video"
+  },
+  "messages": {
+    "title": "Messages",
+    "closeAria": "Close messages",
+    "sellerFallback": "Seller",
+    "sellerWithId": "Seller · {{id}}…",
+    "preparingInbox": "Preparing your inbox…",
+    "indexBuilding": "Firestore is building the index for your conversation list. This usually takes 1–5 minutes. The page will update automatically when ready — no need to refresh.",
+    "loadFailed": "Couldn't load conversations: {{message}}",
+    "emptyThreads": "No conversations yet. Tap \"Contact seller\" on a listing.",
+    "selectThread": "Select a conversation to view messages.",
+    "aboutProduct": "About: {{title}}",
+    "conversation": "Conversation",
+    "emptyChat": "Say hello to the seller — your message will also reach them on mobile.",
+    "sendFailed": "Failed to send: {{message}}",
+    "placeholder": "Write a message…",
+    "send": "Send",
+    "sending": "Sending…"
+  },
+  "sellers": {
+    "verified": "Verified seller",
+    "proAccount": "Pro account",
+    "ratingAria": "Rating {{value}}/5",
+    "reviews": "({{count}} reviews)",
+    "listings_one": "{{count}} listing",
+    "listings_other": "{{count}} listings",
+    "verifiedBadge": "Verified",
+    "visitShop": "Visit shop",
+    "breadcrumbHome": "Home",
+    "pageTitle": "Top sellers",
+    "activeCount_one": "{{count}} active seller",
+    "activeCount_other": "{{count}} active sellers",
+    "pageOf": " · page {{current}}/{{total}}",
+    "empty": "No sellers at the moment.",
+    "loading": "Loading sellers…",
+    "backHome": "Back to home",
+    "loadFailed": "Couldn't load sellers. {{message}}",
+    "emptyPublished": "No seller has published a listing yet.",
+    "paginationAria": "Seller pagination",
+    "defaultBio": "Active marketplace seller. Discover their listings and shop."
+  },
+  "sidebar": {
+    "popularNow": "Popular right now",
+    "topSellers": "Top sellers",
+    "sellerFallback": "Seller {{id}}…"
   },
   "footer": {
     "description": "The easiest way to buy and sell with confidence, anywhere in Morocco.",
@@ -159,6 +206,9 @@
     "home": "Home",
     "postAd": "Post an ad",
     "mobileNav": "Mobile navigation",
+    "unreadNotifications": "{{count}} unread",
+    "noUnreadNotifications": "No unread notifications",
+    "testNotification": "Test: You have a new message",
     "searchDropdown": {
       "loading": "Searching…",
       "empty": "No listings match \"{{query}}\".",
@@ -244,7 +294,12 @@
     "videoFormatHint": "Max {{maxMb}} MB · MP4, WebM, MOV"
   },
   "shop": {
-    "publishListing": "Publish a listing"
+    "publishListing": "Publish a listing",
+    "defaultDescription": "Discover this seller's listings. Quality and transparency, like on Avito.",
+    "backToMarket": "← Back to marketplace",
+    "sellerListings": "Seller listings · {{count}}",
+    "emptyListings": "No listings published yet.",
+    "shopFallback": "Shop · {{id}}…"
   },
   "editAd": {
     "title": "Edit listing",
@@ -507,6 +562,7 @@
     "status": {
       "pending": "Pending",
       "confirmed": "Confirmed by seller",
+      "shipped": "Shipped",
       "completed": "Delivered",
       "cancelled": "Cancelled"
     },

@@ -85,7 +85,54 @@
   "videoPlayer": {
     "previousListing": "Annonce précédente",
     "nextListing": "Annonce suivante",
-    "position": "{{current}} / {{total}}"
+    "position": "{{current}} / {{total}}",
+    "noVideo": "Aucune vidéo disponible pour cette annonce.",
+    "adVideo": "Vidéo de l'annonce"
+  },
+  "messages": {
+    "title": "Messages",
+    "closeAria": "Fermer les messages",
+    "sellerFallback": "Vendeur",
+    "sellerWithId": "Vendeur · {{id}}…",
+    "preparingInbox": "Préparation de la boîte de réception…",
+    "indexBuilding": "Firestore est en train de créer l'index pour la liste de vos conversations. Cela prend généralement 1 à 5 minutes. La page se mettra à jour automatiquement dès que ce sera prêt — pas besoin de rafraîchir.",
+    "loadFailed": "Impossible de charger les conversations : {{message}}",
+    "emptyThreads": "Aucune conversation pour l'instant. Cliquez sur « Contacter le vendeur » depuis une annonce.",
+    "selectThread": "Sélectionnez une conversation pour afficher les messages.",
+    "aboutProduct": "À propos de : {{title}}",
+    "conversation": "Conversation",
+    "emptyChat": "Dites bonjour au vendeur — votre message lui arrivera aussi sur mobile.",
+    "sendFailed": "Échec de l'envoi : {{message}}",
+    "placeholder": "Écrivez un message…",
+    "send": "Envoyer",
+    "sending": "Envoi…"
+  },
+  "sellers": {
+    "verified": "Vendeur vérifié",
+    "proAccount": "Compte Pro",
+    "ratingAria": "Note {{value}}/5",
+    "reviews": "({{count}} avis)",
+    "listings_one": "{{count}} annonce",
+    "listings_other": "{{count}} annonces",
+    "verifiedBadge": "Vérifié",
+    "visitShop": "Visiter la boutique",
+    "breadcrumbHome": "Accueil",
+    "pageTitle": "Meilleurs vendeurs",
+    "activeCount_one": "{{count}} vendeur actif",
+    "activeCount_other": "{{count}} vendeurs actifs",
+    "pageOf": " · page {{current}}/{{total}}",
+    "empty": "Aucun vendeur pour le moment.",
+    "loading": "Chargement des vendeurs…",
+    "backHome": "Retour à l'accueil",
+    "loadFailed": "Impossible de charger les vendeurs. {{message}}",
+    "emptyPublished": "Aucun vendeur n'a publié d'annonce pour le moment.",
+    "paginationAria": "Pagination des vendeurs",
+    "defaultBio": "Vendeur Marketplace actif. Découvrez ses annonces et boutique."
+  },
+  "sidebar": {
+    "popularNow": "Populaires en ce moment",
+    "topSellers": "Top vendeurs",
+    "sellerFallback": "Vendeur {{id}}…"
   },
   "footer": {
     "description": "La façon la plus simple d'acheter et de vendre en toute confiance, partout au Maroc.",
@@ -159,6 +206,9 @@
     "home": "Accueil",
     "postAd": "Publier une annonce",
     "mobileNav": "Navigation mobile",
+    "unreadNotifications": "{{count}} non lue(s)",
+    "noUnreadNotifications": "Aucune notification non lue",
+    "testNotification": "Test : Vous avez un nouveau message",
     "searchDropdown": {
       "loading": "Recherche…",
       "empty": "Aucune annonce ne correspond à « {{query}} ».",
@@ -244,7 +294,12 @@
     "videoFormatHint": "Max {{maxMb}} Mo · MP4, WebM, MOV"
   },
   "shop": {
-    "publishListing": "Publier une annonce"
+    "publishListing": "Publier une annonce",
+    "defaultDescription": "Découvrez les annonces de ce vendeur. Qualité et transparence, comme sur Avito.",
+    "backToMarket": "← Retour au marché",
+    "sellerListings": "Annonces du vendeur · {{count}}",
+    "emptyListings": "Aucune annonce publiée pour le moment.",
+    "shopFallback": "Boutique · {{id}}…"
   },
   "editAd": {
     "title": "Modifier mon annonce",

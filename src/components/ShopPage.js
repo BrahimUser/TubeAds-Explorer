@@ -43,8 +43,8 @@ export default function ShopPage({
 
   const displayName = useMemo(() => {
     if (seller?.shopName) return seller.shopName;
-    return `Boutique · ${sellerId?.slice(0, 8)}…`;
-  }, [seller, sellerId]);
+    return t('shop.shopFallback', { id: sellerId?.slice(0, 8) });
+  }, [seller, sellerId, t]);
 
   function handleVisitSeller(uid) {
     if (!uid) return;
@@ -87,8 +87,7 @@ export default function ShopPage({
               )}
             </div>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
-              {seller?.shopDescription ||
-                'Découvrez les annonces de ce vendeur. Qualité et transparence, comme sur Avito.'}
+              {seller?.shopDescription || t('shop.defaultDescription')}
             </p>
             <button
               type="button"
@@ -98,7 +97,7 @@ export default function ShopPage({
                 onNavigateHome?.();
               }}
             >
-              ← Retour au marché
+              {t('shop.backToMarket')}
             </button>
           </div>
         </div>
@@ -106,7 +105,7 @@ export default function ShopPage({
 
       <section className={`mx-auto mt-10 ${SITE_MAX_WIDTH_CLASS} ${SITE_GUTTER_CLASS}`}>
         <h2 className="text-lg font-extrabold tracking-tight text-slate-900">
-          Annonces du vendeur · {ads.length}
+          {t('shop.sellerListings', { count: ads.length })}
         </h2>
 
         {status === 'loading' && (
@@ -131,7 +130,7 @@ export default function ShopPage({
 
         {status === 'ready' && ads.length === 0 && (
           <div className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center text-slate-600">
-            <p>Aucune annonce publiée pour le moment.</p>
+            <p>{t('shop.emptyListings')}</p>
             {isOwnShop && (
               <button
                 type="button"

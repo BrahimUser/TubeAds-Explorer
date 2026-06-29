@@ -2,6 +2,8 @@
  * “Populaires en ce moment” — compact thumbnail rows.
  */
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { DEFAULT_LANGUAGE } from '../../i18n';
 import { Icon } from '../Icons';
 
 function tsMs(ts) {
@@ -13,13 +15,20 @@ function tsMs(ts) {
   return 0;
 }
 
-function formatPriceCompact(priceCents, currency = 'MAD') {
+const NUMBER_LOCALE_FOR_LANG = { fr: 'fr-FR', en: 'en-US', ar: 'ar-MA' };
+
+function formatPriceCompact(priceCents, currency = 'MAD', lang = DEFAULT_LANGUAGE) {
   if (typeof priceCents !== 'number' || Number.isNaN(priceCents)) return '—';
-  const amount = Math.round(priceCents / 100).toLocaleString('fr-FR');
+  const amount = Math.round(priceCents / 100).toLocaleString(
+    NUMBER_LOCALE_FOR_LANG[lang] || 'ar-MA',
+  );
   return currency === 'MAD' ? `${amount} MAD` : `${amount} ${currency}`;
 }
 
 export default function PopularNowSidebar({ ads, onPlay, onViewAll }) {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language || DEFAULT_LANGUAGE;
+
   const items = useMemo(() => {
     const sorted = [...ads].sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt));
     return sorted.slice(0, 4);
@@ -34,7 +43,9 @@ export default function PopularNowSidebar({ ads, onPlay, onViewAll }) {
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-50 text-brand-600">
             <Icon name="tag" className="h-4 w-4" />
           </span>
-          <h3 className="text-sm font-extrabold tracking-tight text-slate-900">Populaires en ce moment</h3>
+          <h3 className="text-sm font-extrabold tracking-tight text-slate-900">
+            {t('sidebar.popularNow')}
+          </h3>
         </div>
         {onViewAll && (
           <button
@@ -42,7 +53,7 @@ export default function PopularNowSidebar({ ads, onPlay, onViewAll }) {
             onClick={() => onViewAll()}
             className="shrink-0 text-xs font-semibold text-brand-600 hover:text-brand-700"
           >
-            Voir tout
+            {t('common.viewAll')}
           </button>
         )}
       </div>
@@ -52,7 +63,7 @@ export default function PopularNowSidebar({ ads, onPlay, onViewAll }) {
             <button
               type="button"
               onClick={() => onPlay?.(ad)}
-              className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition hover:bg-slate-50"
+              className="flex w-full items-center gap-3 rounded-xl p-2 text-start transition hover:bg-slate-50"
             >
               <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-100">
                 {ad.thumbnailUrl ? (
@@ -65,13 +76,17 @@ export default function PopularNowSidebar({ ads, onPlay, onViewAll }) {
               </span>
               <span className="min-w-0 flex-1 py-0.5">
                 <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-slate-900">
-                  {ad.title || 'Sans titre'}
+                  {ad.title || t('common.untitled')}
                 </span>
                 <span className="mt-0.5 block text-xs font-bold text-brand-500">
-                  {formatPriceCompact(ad.priceCents, ad.currency)}
+                  {formatPriceCompact(ad.priceCents, ad.currency, lang)}
                 </span>
               </span>
-              <Icon name="chevronDown" className="-rotate-90 h-4 w-4 shrink-0 text-slate-300" aria-hidden />
+              <Icon
+                name="chevronDown"
+                className="-rotate-90 rtl:rotate-90 h-4 w-4 shrink-0 text-slate-300"
+                aria-hidden
+              />
             </button>
           </li>
         ))}

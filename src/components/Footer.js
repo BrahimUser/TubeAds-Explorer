@@ -36,7 +36,8 @@ const socialLinkBase =
   'motion-reduce:transition-none motion-reduce:hover:scale-100';
 
 export default function Footer({ onHome, onNavigatePath }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language || 'ar';
   const navLinkClass =
     'block text-sm text-slate-600 transition hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 rounded-sm';
 
@@ -180,7 +181,10 @@ export default function Footer({ onHome, onNavigatePath }) {
                   className="inline-flex rounded-[10px] transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2"
                   aria-label={t('footer.googlePlay')}
                 >
-                  <GooglePlayBadgeSvg className="h-11 w-[148px] sm:h-12 sm:w-[162px]" />
+                  <GooglePlayBadgeSvg
+                    lang={lang}
+                    className="h-11 w-[148px] sm:h-12 sm:w-[162px]"
+                  />
                 </a>
                 <a
                   href={FOOTER_STORE_URLS.appStore}
@@ -189,7 +193,10 @@ export default function Footer({ onHome, onNavigatePath }) {
                   className="inline-flex rounded-[10px] transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2"
                   aria-label={t('footer.appStore')}
                 >
-                  <AppStoreBadgeSvg className="h-11 w-[148px] sm:h-12 sm:w-[162px]" />
+                  <AppStoreBadgeSvg
+                    lang={lang}
+                    className="h-11 w-[148px] sm:h-12 sm:w-[162px]"
+                  />
                 </a>
               </div>
             </div>
