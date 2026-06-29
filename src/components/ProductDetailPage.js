@@ -13,6 +13,7 @@ import { normalizeUserProfile } from '../services/users';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
 import { DEFAULT_LANGUAGE } from '../i18n';
 import { Icon } from './Icons';
+import CallSellerModal from './CallSellerModal';
 
 const CURRENCY_SUFFIX = { MAD: 'MAD', EUR: '€', USD: '$' };
 const PRICE_LOCALE_FOR_LANG = { fr: 'fr-FR', en: 'en-US', ar: 'ar-MA' };
@@ -147,9 +148,11 @@ export default function ProductDetailPage({
   const createChatThread = useCreateChatThread();
   const [activeIndex, setActiveIndex] = useState(0);
   const [contactError, setContactError] = useState(null);
+  const [callModalOpen, setCallModalOpen] = useState(false);
 
   useEffect(() => {
     setActiveIndex(0);
+    setCallModalOpen(false);
   }, [listingId]);
 
   const status = isLoading ? 'loading' : isError ? 'error' : ad ? 'ready' : 'missing';
@@ -283,6 +286,8 @@ export default function ProductDetailPage({
 
   const displayName =
     resolvedSeller?.shopName?.trim() || `${t('product.seller')} · ${ad.ownerUid?.slice(0, 8) || '—'}…`;
+  const sellerPhone = resolvedSeller?.phoneNumber?.trim() || '';
+  const canCallSeller = Boolean(sellerPhone) && !isOwner;
 
   return (
     <main
@@ -497,6 +502,31 @@ export default function ProductDetailPage({
                     <p className="mt-0.5 text-xs text-slate-500">{t('product.sellerOnMarketplace')}</p>
                   </div>
                 </div>
+                {canCallSeller && (
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-100">
+                        <Icon name="phone" className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          {t('product.sellerPhone')}
+                        </p>
+                        <p className="truncate text-base font-extrabold text-slate-900 tabular-nums" dir="ltr">
+                          {sellerPhone}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCallModalOpen(true)}
+                      className="inline-flex min-h-[3.25rem] shrink-0 items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 px-5 py-3.5 text-base font-extrabold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 active:scale-[0.99] sm:min-w-[9.5rem]"
+                    >
+                      <Icon name="phone" className="h-5 w-5 shrink-0" />
+                      {t('product.callSeller')}
+                    </button>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => onVisitShop?.(ad.ownerUid)}
@@ -509,6 +539,12 @@ export default function ProductDetailPage({
           </aside>
         </div>
       </div>
+
+      <CallSellerModal
+        open={callModalOpen}
+        phoneNumber={sellerPhone}
+        onClose={() => setCallModalOpen(false)}
+      />
 
       {!isOwner && (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 border-t border-orange-100 bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(15,23,42,0.12)] backdrop-blur-md lg:hidden">
