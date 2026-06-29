@@ -2,6 +2,8 @@
 // Keep in sync if the mobile taxonomy changes — same English `label` is
 // what gets stored in `listings.category`.
 
+import i18n from '../i18n';
+
 export const CATEGORIES = [
   { id: 'agriculture', label: 'Agriculture', icon: 'sprout', tone: 'bg-lime-50 text-lime-700' },
   { id: 'real-estate', label: 'Real Estate', icon: 'home', tone: 'bg-emerald-50 text-emerald-600' },
@@ -41,8 +43,49 @@ export const CITIES = [
 
 const CITY_LABEL_BY_ID = Object.fromEntries(CITIES.map((c) => [c.id, c.label]));
 
-export function cityLabel(id) {
+export const CITY_I18N_KEYS = {
+  casablanca: 'cities.casablanca',
+  rabat: 'cities.rabat',
+  fes: 'cities.fes',
+  marrakech: 'cities.marrakech',
+  tangier: 'cities.tangier',
+  agadir: 'cities.agadir',
+  meknes: 'cities.meknes',
+  oujda: 'cities.oujda',
+  kenitra: 'cities.kenitra',
+  tetouan: 'cities.tetouan',
+  sale: 'cities.sale',
+  nador: 'cities.nador',
+  mohammedia: 'cities.mohammedia',
+  'beni-mellal': 'cities.beniMellal',
+  'el-jadida': 'cities.elJadida',
+  taza: 'cities.taza',
+  settat: 'cities.settat',
+  laayoune: 'cities.laayoune',
+  dakhla: 'cities.dakhla',
+  other: 'cities.other',
+};
+
+const CITY_SORT_LOCALE = { ar: 'ar', fr: 'fr', en: 'en' };
+
+export function localizedCityLabel(id, t) {
   if (!id) return '';
+  const key = CITY_I18N_KEYS[id];
+  return key ? t(key) : CITY_LABEL_BY_ID[id] || id;
+}
+
+export function getSortedCities(t, lang = i18n.language) {
+  const locale = CITY_SORT_LOCALE[lang] || 'en';
+  const collator = new Intl.Collator(locale, { sensitivity: 'base' });
+  return [...CITIES]
+    .map((c) => ({ ...c, label: localizedCityLabel(c.id, t) }))
+    .sort((a, b) => collator.compare(a.label, b.label));
+}
+
+export function cityLabel(id, lang = i18n.language) {
+  if (!id) return '';
+  const key = CITY_I18N_KEYS[id];
+  if (key) return i18n.t(key, { lng: lang });
   return CITY_LABEL_BY_ID[id] || id;
 }
 

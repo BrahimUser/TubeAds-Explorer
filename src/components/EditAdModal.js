@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { CATEGORIES, CITIES, categoryFirestoreValue } from '../services/categories';
+import { CATEGORIES, categoryFirestoreValue, getSortedCities } from '../services/categories';
 import { useUpdateListing } from '../mutations/useUpdateListing';
 import { useUploadFiles } from '../mutations/useUpload';
 import { useUploadVideo } from '../mutations/useUploadVideo';
@@ -35,7 +35,8 @@ function appendUniqueFiles(prev, incoming) {
 }
 
 export default function EditAdModal({ open, ad, onClose, onSaved }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const sortedCities = useMemo(() => getSortedCities(t, i18n.language), [t, i18n.language]);
   const { user } = useAuth();
   const updateListing = useUpdateListing();
   const uploadFiles = useUploadFiles();
@@ -335,7 +336,7 @@ export default function EditAdModal({ open, ad, onClose, onSaved }) {
                 className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
               >
                 <option value="">{t('createAd.fieldCityPlaceholder')}</option>
-                {CITIES.map((c) => (
+                {sortedCities.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.label}
                   </option>

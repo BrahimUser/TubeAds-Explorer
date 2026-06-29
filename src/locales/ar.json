@@ -65,6 +65,28 @@
     "other": "أخرى",
     "more": "المزيد"
   },
+  "cities": {
+    "casablanca": "الدار البيضاء",
+    "rabat": "الرباط",
+    "fes": "فاس",
+    "marrakech": "مراكش",
+    "tangier": "طنجة",
+    "agadir": "أكادير",
+    "meknes": "مكناس",
+    "oujda": "وجدة",
+    "kenitra": "القنيطرة",
+    "tetouan": "تطوان",
+    "sale": "سلا",
+    "nador": "الناظور",
+    "mohammedia": "المحمدية",
+    "beniMellal": "بني ملال",
+    "elJadida": "الجديدة",
+    "taza": "تازة",
+    "settat": "سطات",
+    "laayoune": "العيون",
+    "dakhla": "الداخلة",
+    "other": "أخرى"
+  },
   "card": {
     "untitled": "بدون عنوان",
     "pro": "محترف",

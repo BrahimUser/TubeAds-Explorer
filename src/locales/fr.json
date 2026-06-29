@@ -65,6 +65,28 @@
     "other": "Autres",
     "more": "Plus"
   },
+  "cities": {
+    "casablanca": "Casablanca",
+    "rabat": "Rabat",
+    "fes": "Fès",
+    "marrakech": "Marrakech",
+    "tangier": "Tanger",
+    "agadir": "Agadir",
+    "meknes": "Meknès",
+    "oujda": "Oujda",
+    "kenitra": "Kénitra",
+    "tetouan": "Tétouan",
+    "sale": "Salé",
+    "nador": "Nador",
+    "mohammedia": "Mohammedia",
+    "beniMellal": "Beni Mellal",
+    "elJadida": "El Jadida",
+    "taza": "Taza",
+    "settat": "Settat",
+    "laayoune": "Laâyoune",
+    "dakhla": "Dakhla",
+    "other": "Autre"
+  },
   "card": {
     "untitled": "Sans titre",
     "pro": "Pro",

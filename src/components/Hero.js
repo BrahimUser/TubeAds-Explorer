@@ -8,9 +8,10 @@
  *      the title uses a soft text-shadow for readability instead of a
  *      solid colour panel.
  */
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SITE_GUTTER_CLASS, SITE_MAX_WIDTH_CLASS } from '../constants/layout';
-import { CATEGORIES, CITIES } from '../services/categories';
+import { CATEGORIES, getSortedCities } from '../services/categories';
 import { Icon } from './Icons';
 
 const HERO_BG = `${process.env.PUBLIC_URL || ''}/logo.png`;
@@ -48,6 +49,7 @@ export default function Hero({
 }) {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
+  const sortedCities = useMemo(() => getSortedCities(t, i18n.language), [t, i18n.language]);
   return (
     <section
       className="relative isolate w-full overflow-hidden rounded-b-3xl bg-transparent"
@@ -176,7 +178,7 @@ export default function Hero({
                       className="h-full min-h-[38px] w-full cursor-pointer appearance-none bg-white py-1.5 pe-8 ps-2.5 text-start text-[13px] font-medium text-slate-800 outline-none sm:text-sm"
                     >
                       <option value="">{t('hero.allCities')}</option>
-                      {CITIES.map((c) => (
+                      {sortedCities.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.label}
                         </option>
