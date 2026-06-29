@@ -48,7 +48,7 @@ function hasNewBadge(ts) {
   return ms != null && Date.now() - ms < NEW_MS;
 }
 
-function AdCardTextBlock({ ad, compact, isSellerPro, isOwner, onEdit, onOpenDetail, t, lang }) {
+function AdCardTextBlock({ ad, compact, isSellerPro, isOwner, onEdit, onVisitShop, showVisitShop, t, lang }) {
   return (
     <>
       <div className="flex min-h-[2.25rem] flex-wrap items-start gap-2">
@@ -79,7 +79,7 @@ function AdCardTextBlock({ ad, compact, isSellerPro, isOwner, onEdit, onOpenDeta
           {formatPrice(ad.priceCents, ad.currency, lang)}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          {onOpenDetail && (
+          {showVisitShop && ad.ownerUid && onVisitShop && (
             <button
               type="button"
               className={
@@ -89,11 +89,10 @@ function AdCardTextBlock({ ad, compact, isSellerPro, isOwner, onEdit, onOpenDeta
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onOpenDetail(ad);
+                onVisitShop(ad.ownerUid);
               }}
             >
-              <Icon name="search" className="h-3.5 w-3.5 shrink-0 text-brand-600" />
-              {t('card.viewListing')}
+              {t('card.visitShop')}
             </button>
           )}
           {isOwner && (
@@ -286,7 +285,8 @@ export default function AdCard({
               isSellerPro={isSellerPro}
               isOwner={isOwner}
               onEdit={onEdit}
-              onOpenDetail={onOpenDetail}
+              onVisitShop={onVisitShop}
+              showVisitShop={showVisitShop}
               t={t}
               lang={lang}
             />
@@ -298,25 +298,27 @@ export default function AdCard({
             isSellerPro={isSellerPro}
             isOwner={isOwner}
             onEdit={onEdit}
-            onOpenDetail={onOpenDetail}
+            onVisitShop={onVisitShop}
+            showVisitShop={showVisitShop}
             t={t}
             lang={lang}
           />
         )}
-        {showVisitShop && ad.ownerUid && onVisitShop && (
+        {onOpenDetail && (
           <button
             type="button"
             className={
-              'mt-1 w-full rounded-xl border border-slate-200/90 bg-white text-center text-xs font-bold text-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50 ' +
+              'mt-1 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200/90 bg-white text-center text-xs font-bold text-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50 ' +
               (compact ? 'py-2' : 'py-2.5')
             }
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onVisitShop(ad.ownerUid);
+              onOpenDetail(ad);
             }}
           >
-            {t('card.visitShop')}
+            <Icon name="search" className="h-3.5 w-3.5 shrink-0 text-brand-600" />
+            {t('card.viewListing')}
           </button>
         )}
       </div>
